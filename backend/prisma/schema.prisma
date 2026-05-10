@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  role      String   // 'admin' atau 'guru'
+  nama      String
+  nip       String?  // NIP untuk guru, boleh null untuk admin
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  pengampu  Pengampu[]
+}
+
+model TahunPelajaran {
+  id        Int      @id @default(autoincrement())
+  nama      String   // misal: "2023/2024"
+  semester  String   // "Ganjil" atau "Genap"
+  isActive  Boolean  @default(false)
+  kelas     Kelas[]
+}
+
+model MataPelajaran {
+  id        Int      @id @default(autoincrement())
+  nama      String
+  pengampu  Pengampu[]
+}
+
+model Kelas {
+  id               Int      @id @default(autoincrement())
+  nama             String
+  tahunPelajaranId Int
+  tahunPelajaran   TahunPelajaran @relation(fields: [tahunPelajaranId], references: [id])
+  pengampu         Pengampu[]
+  enrollment       Enrollment[]
+}
+
+model Siswa {
+  id         Int      @id @default(autoincrement())
+  nis        String   @unique
+  nama       String
+  enrollment Enrollment[]
+  absensi    AbsensiSiswa[]
+}
+
+model Enrollment {
+  id        Int      @id @default(autoincrement())
+  siswaId   Int
+  kelasId   Int
+  siswa     Siswa    @relation(fields: [siswaId], references: [id], onDelete: Cascade)
+  kelas     Kelas    @relation(fields: [kelasId], references: [id], onDelete: Cascade)
+  
+  @@unique([siswaId, kelasId])
+}
+
+// Hubungan Guru -> Mapel -> Kelas
+model Pengampu {
+  id        Int      @id @default(autoincrement())
+  guruId    Int
+  mapelId   Int
+  kelasId   Int
+  guru      User     @relation(fields: [guruId], references: [id], onDelete: Cascade)
+  mapel     MataPelajaran @relation(fields: [mapelId], references: [id], onDelete: Cascade)
+  kelas     Kelas    @relation(fields: [kelasId], references: [id], onDelete: Cascade)
+  agenda    Agenda[]
+  absensi   Absensi[]
+}
+
+// Transaksional: Agenda
+model Agenda {
+  id            Int      @id @default(autoincrement())
+  pengampuId    Int
+  tanggal       DateTime @db.Date
+  materi        String
+  deskripsi     String
+  catatan       String?
+  last_modified DateTime @default(now())
+  status_sync   String   @default("synced") // "synced", "pending_insert"
+  
+  pengampu      Pengampu @relation(fields: [pengampuId], references: [id], onDelete: Cascade)
+}
+
+// Transaksional: Absensi (Header per tugas/hari)
+model Absensi {
+  id            Int      @id @default(autoincrement())
+  pengampuId    Int
+  tanggal       DateTime @db.Date
+  last_modified DateTime @default(now())
+  status_sync   String   @default("synced")
+  
+  pengampu      Pengampu @relation(fields: [pengampuId], references: [id], onDelete: Cascade)
+  siswaDetail   AbsensiSiswa[]
+}
+
+// Detail Kehadiran Siswa
+model AbsensiSiswa {
+  id          Int      @id @default(autoincrement())
+  absensiId   Int
+  siswaId     Int
+  status      String   // "Hadir", "Sakit", "Izin", "Alpa"
+  
+  absensi     Absensi  @relation(fields: [absensiId], references: [id], onDelete: Cascade)
+  siswa       Siswa    @relation(fields: [siswaId], references: [id], onDelete: Cascade)
+}
