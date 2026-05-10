@@ -58,6 +58,7 @@ const MapelScreen = () => {
         <div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Mata Pelajaran</h1>
           <p style={{ color: 'var(--text-muted)' }}>Kelola data mata pelajaran yang ada di sekolah.</p>
+          <p style={{ color: 'var(--info)', fontSize: '0.75rem', marginTop: '0.25rem' }}>* Untuk Import CSV, pastikan menggunakan header: <b>nama</b></p>
         </div>
         <div className="flex gap-2">
           <input 

@@ -119,6 +119,7 @@ const SiswaScreen = () => {
         <div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Data Siswa & Enrollment</h1>
           <p style={{ color: 'var(--text-muted)' }}>Kelola data siswa dan daftarkan siswa ke kelas pada tahun pelajaran aktif.</p>
+          <p style={{ color: 'var(--info)', fontSize: '0.75rem', marginTop: '0.25rem' }}>* Untuk Import CSV, pastikan menggunakan header: <b>nama, nis</b></p>
         </div>
         <div className="flex gap-2">
           {selectedIds.length > 0 && (
