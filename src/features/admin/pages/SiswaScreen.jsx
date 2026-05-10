@@ -15,6 +15,7 @@ const SiswaScreen = () => {
   const [showEnrollModal, setShowEnrollModal] = useState(false);
   const [enrollTarget, setEnrollTarget] = useState({ type: null, siswaId: null, nama: '' }); // type: 'single' | 'mass'
   const [selectedKelasId, setSelectedKelasId] = useState('');
+  const [filterKelasId, setFilterKelasId] = useState('');
 
   const tahunAktif = tahunPelajaran.find(t => t.isActive);
 
@@ -43,8 +44,8 @@ const SiswaScreen = () => {
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.length === siswa.length) setSelectedIds([]);
-    else setSelectedIds(siswa.map(s => s.id));
+    if (selectedIds.length === filteredSiswa.length && filteredSiswa.length > 0) setSelectedIds([]);
+    else setSelectedIds(filteredSiswa.map(s => s.id));
   };
 
   const toggleSelect = (id) => {
@@ -103,6 +104,15 @@ const SiswaScreen = () => {
     }
   };
 
+  const filteredSiswa = siswa.filter(item => {
+    if (!filterKelasId) return true;
+    const kelasAktif = getKelasAktif(item.enrollment);
+    if (filterKelasId === 'unassigned') return kelasAktif === '-';
+    
+    const selectedKelas = kelas.find(k => k.id === parseInt(filterKelasId));
+    return selectedKelas && kelasAktif === selectedKelas.nama;
+  });
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -129,6 +139,27 @@ const SiswaScreen = () => {
           <button className="btn btn-primary" onClick={handleAddClick}>
             <Plus size={18} /> Tambah Siswa
           </button>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between" style={{ marginTop: '0.5rem', marginBottom: '0.5rem' }}>
+        <div className="flex items-center gap-2">
+          <label style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-muted)' }}>Filter Kelas:</label>
+          <select 
+            className="input" 
+            style={{ padding: '0.5rem', minWidth: '200px' }}
+            value={filterKelasId}
+            onChange={(e) => {
+              setFilterKelasId(e.target.value);
+              setSelectedIds([]); // reset selection on filter change
+            }}
+          >
+            <option value="">Semua Siswa</option>
+            <option value="unassigned">Belum Ada Kelas</option>
+            {kelas.map(k => (
+              <option key={k.id} value={k.id}>{k.nama}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -171,7 +202,7 @@ const SiswaScreen = () => {
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--surface-hover)' }}>
               <th style={{ padding: '1rem', width: '50px' }}>
-                <input type="checkbox" checked={selectedIds.length === siswa.length && siswa.length > 0} onChange={toggleSelectAll} />
+                <input type="checkbox" checked={selectedIds.length === filteredSiswa.length && filteredSiswa.length > 0} onChange={toggleSelectAll} />
               </th>
               <th style={{ padding: '1rem', color: 'var(--text-muted)', fontWeight: '600' }}>NIS / NISN</th>
               <th style={{ padding: '1rem', color: 'var(--text-muted)', fontWeight: '600' }}>Nama Lengkap</th>
@@ -180,7 +211,11 @@ const SiswaScreen = () => {
             </tr>
           </thead>
           <tbody>
-            {siswa.map((item) => {
+            {filteredSiswa.length === 0 ? (
+              <tr>
+                <td colSpan="5" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Tidak ada data siswa ditemukan.</td>
+              </tr>
+            ) : filteredSiswa.map((item) => {
               const kelasAktif = getKelasAktif(item.enrollment);
               return (
               <tr key={item.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
