@@ -188,9 +188,25 @@ router.put('/siswa/:id', async (req, res) => {
 });
 
 router.post('/siswa/batch', async (req, res) => {
-  const { payloads } = req.body;
+  const { payloads, kelasId } = req.body;
   const processedData = payloads.map(item => ({ nama: item.nama, nis: item.nis }));
+  
   await prisma.siswa.createMany({ data: processedData, skipDuplicates: true });
+
+  if (kelasId) {
+    const nisList = processedData.map(p => p.nis);
+    const createdSiswa = await prisma.siswa.findMany({
+      where: { nis: { in: nisList } }
+    });
+    
+    const enrollPayloads = createdSiswa.map(s => ({
+      siswaId: s.id,
+      kelasId: parseInt(kelasId)
+    }));
+    
+    await prisma.enrollment.createMany({ data: enrollPayloads, skipDuplicates: true });
+  }
+
   res.json({ success: true, count: payloads.length });
 });
 

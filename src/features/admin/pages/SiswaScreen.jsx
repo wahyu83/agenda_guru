@@ -11,6 +11,9 @@ const SiswaScreen = () => {
   
   const [selectedIds, setSelectedIds] = useState([]);
   const fileInputRef = useRef(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importKelasId, setImportKelasId] = useState('');
+  const [importFile, setImportFile] = useState(null);
   
   const [showEnrollModal, setShowEnrollModal] = useState(false);
   const [enrollTarget, setEnrollTarget] = useState({ type: null, siswaId: null, nama: '' }); // type: 'single' | 'mass'
@@ -27,16 +30,19 @@ const SiswaScreen = () => {
     return activeEnrollment ? activeEnrollment.kelas.nama : '-';
   };
 
-  const handleImport = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      Papa.parse(file, {
+  const handleImportSubmit = (e) => {
+    e.preventDefault();
+    if (importFile) {
+      Papa.parse(importFile, {
         header: true,
         skipEmptyLines: true,
         complete: async (results) => {
           if (results.data && results.data.length > 0) {
-            await importSiswa(results.data);
+            await importSiswa(results.data, importKelasId || null);
             alert(`${results.data.length} data siswa berhasil diimpor!`);
+            setShowImportModal(false);
+            setImportFile(null);
+            setImportKelasId('');
           }
         }
       });
@@ -127,14 +133,7 @@ const SiswaScreen = () => {
               <CheckSquare size={18} /> Mutasi Massal ({selectedIds.length})
             </button>
           )}
-          <input 
-            type="file" 
-            accept=".csv" 
-            ref={fileInputRef} 
-            style={{ display: 'none' }} 
-            onChange={handleImport} 
-          />
-          <button className="btn btn-secondary" onClick={() => fileInputRef.current.click()}>
+          <button className="btn btn-secondary" onClick={() => setShowImportModal(true)}>
             <Upload size={18} /> Import CSV
           </button>
           <button className="btn btn-primary" onClick={handleAddClick}>
@@ -297,6 +296,46 @@ const SiswaScreen = () => {
               <div className="flex gap-2 justify-end mt-2">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowEnrollModal(false)}>Batal</button>
                 <button type="submit" className="btn btn-primary">Simpan Enroll</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {showImportModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
+          <div className="card" style={{ width: '90%', maxWidth: '400px' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>Import Data Siswa</h2>
+            <form onSubmit={handleImportSubmit} className="flex flex-col gap-4">
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>File CSV (Header: nama, nis)</label>
+                <input 
+                  type="file" 
+                  accept=".csv"
+                  className="input"
+                  style={{ padding: '0.5rem', width: '100%' }}
+                  onChange={(e) => setImportFile(e.target.files[0])}
+                  required
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>Pilih Kelas Tujuan (Opsional)</label>
+                <select 
+                  className="input" 
+                  value={importKelasId}
+                  onChange={(e) => setImportKelasId(e.target.value)}
+                  style={{ width: '100%' }}
+                >
+                  <option value="">-- Hanya Import (Belum Ada Kelas) --</option>
+                  {kelas.map(k => (
+                    <option key={k.id} value={k.id}>{k.nama}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex gap-2 justify-end mt-4">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowImportModal(false)}>Batal</button>
+                <button type="submit" className="btn btn-primary" style={{ backgroundColor: 'var(--success)' }}>
+                  <Upload size={16} style={{ marginRight: '0.5rem' }} /> Mulai Import
+                </button>
               </div>
             </form>
           </div>

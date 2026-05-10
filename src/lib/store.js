@@ -195,11 +195,11 @@ export const useAppStore = create((set, get) => ({
     set((state) => ({ siswa: state.siswa.map(item => item.id === id ? { ...item, ...newData } : item) }));
   },
   
-  importSiswa: async (payloads) => {
+  importSiswa: async (payloads, kelasId = null) => {
     await fetch(`${API_BASE}/admin/siswa/batch`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ payloads })
+      body: JSON.stringify({ payloads, kelasId })
     });
     get().fetchMasterData();
   },
