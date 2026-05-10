@@ -1,5 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { fileURLToPath } from 'url'
+import path from 'path'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
@@ -7,12 +9,10 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.png'],
+      includeAssets: ['favicon.svg', 'icon.png'],
       manifest: {
-        name: 'Agenda Guru & Absensi',
+        name: 'Agenda Guru & Absensi Siswa',
         short_name: 'Agenda Guru',
-        description: 'Aplikasi pencatatan agenda mengajar harian dan absensi siswa.',
-        theme_color: '#4F46E5',
         background_color: '#F8FAFC',
         display: 'standalone',
         icons: [
