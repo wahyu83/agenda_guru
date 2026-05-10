@@ -151,8 +151,8 @@ const AbsensiScreen = () => {
         ))}
       </div>
       
-      <div style={{ position: 'sticky', bottom: '1.5rem', marginLeft: 'auto', marginRight: '1rem', width: 'fit-content', zIndex: 30, marginTop: '-4rem' }}>
-        <button onClick={handleSave} disabled={isSaving} className="btn btn-primary" style={{ padding: '0.75rem 1.5rem', borderRadius: 'var(--radius-full)', boxShadow: 'var(--shadow-lg)' }}>
+      <div style={{ marginTop: '1rem', paddingBottom: '2rem' }}>
+        <button onClick={handleSave} disabled={isSaving} className="btn btn-primary w-full" style={{ padding: '0.875rem', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-sm)' }}>
           <Save size={20} /> {isSaving ? 'Menyimpan...' : 'Simpan Absensi'}
         </button>
       </div>
