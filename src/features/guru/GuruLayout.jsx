@@ -47,7 +47,7 @@ const GuruLayout = () => {
           <div className="flex items-center gap-1" style={{ backgroundColor: 'var(--warning)', padding: '0.25rem 0.5rem', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: '600' }}>
             <WifiOff size={14} /> Offline Mode
           </div>
-        ) : !location.pathname.includes('/riwayat') ? (
+        ) : location.pathname.includes('/riwayat') ? (
           <button onClick={handleLogout} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}>
              Logout
           </button>
