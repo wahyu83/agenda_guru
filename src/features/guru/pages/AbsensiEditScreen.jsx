@@ -125,8 +125,8 @@ const AbsensiEditScreen = () => {
         ))}
       </div>
       
-      <div style={{ position: 'absolute', bottom: '70px', right: '1rem', zIndex: 20 }}>
-        <button onClick={handleSave} disabled={isSaving} className="btn btn-primary flex items-center gap-2" style={{ padding: '0.75rem 1.5rem', borderRadius: 'var(--radius-full)', boxShadow: 'var(--shadow-lg)' }}>
+      <div style={{ position: 'fixed', bottom: '80px', left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: '480px', display: 'flex', justifyContent: 'flex-end', padding: '0 1rem', pointerEvents: 'none', zIndex: 30 }}>
+        <button onClick={handleSave} disabled={isSaving} className="btn btn-primary flex items-center gap-2" style={{ pointerEvents: 'auto', padding: '0.75rem 1.5rem', borderRadius: 'var(--radius-full)', boxShadow: 'var(--shadow-lg)' }}>
           <Save size={20} /> {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
         </button>
       </div>
