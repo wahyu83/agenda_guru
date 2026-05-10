@@ -215,17 +215,40 @@ const LaporanScreen = () => {
     });
 
     if (type === 'csv') {
-      // Combine matrices into one CSV by adding empty rows between classes
-      let finalCsvData = [];
-      matrices.forEach(m => {
-        finalCsvData.push({ No: `Kelas: ${m.kelas} | Mapel: ${m.mapel} | Guru: ${m.guru}` });
-        finalCsvData.push({}); // Empty row
-        finalCsvData = finalCsvData.concat(m.matrixData);
-        finalCsvData.push({});
-        finalCsvData.push({});
+      // Create a matrix-style CSV (array of arrays)
+      let csvRows = [];
+      
+      matrices.forEach((m, idx) => {
+        // Class header info
+        csvRows.push([`LAPORAN ABSENSI - ${m.kelas}`]);
+        csvRows.push([`Mata Pelajaran:`, m.mapel]);
+        csvRows.push([`Guru Pengampu:`, m.guru]);
+        csvRows.push([]); // Spacer
+
+        // Table Header
+        const headerRow = ['No', 'Nama Siswa', ...m.dates, 'H', 'S', 'I', 'A'];
+        csvRows.push(headerRow);
+
+        // Data Rows
+        m.matrixData.forEach(row => {
+          const dataRow = [row.No, row.Nama];
+          // Fill date columns
+          m.dates.forEach(date => {
+            dataRow.push(row[date] || '-');
+          });
+          // Fill H, S, I, A
+          dataRow.push(row.H, row.S, row.I, row.A);
+          csvRows.push(dataRow);
+        });
+
+        // Add spacers between matrices
+        csvRows.push([]);
+        csvRows.push([]);
       });
-      handleExportCSV('Laporan_Absensi_Matrix', finalCsvData);
-    } else {
+
+      handleExportCSV('Laporan_Absensi_Matrix', csvRows);
+    }
+ else {
       try {
         // Landscape orientation for many columns
         const doc = new jsPDF('landscape');

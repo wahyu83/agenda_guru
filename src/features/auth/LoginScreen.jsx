@@ -1,15 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, User } from 'lucide-react';
-import { useAppStore } from '../../lib/store';
+import { useAppStore, API_BASE } from '../../lib/store';
+
 
 const LoginScreen = () => {
   const navigate = useNavigate();
-  const { setUser } = useAppStore();
+  const { user, setUser } = useAppStore();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      if (user.role === 'admin') {
+        navigate('/admin', { replace: true });
+      } else {
+        navigate('/guru', { replace: true });
+      }
+    }
+  }, [user, navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -17,7 +28,8 @@ const LoginScreen = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:3000/api/auth/login', {
+      const response = await fetch(`${API_BASE}/auth/login`, {
+
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
@@ -56,7 +68,12 @@ const LoginScreen = () => {
           <div style={{ padding: '1rem', backgroundColor: 'var(--primary)', borderRadius: 'var(--radius-full)', color: 'white' }}>
             <BookOpen size={32} />
           </div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Agenda Guru</h1>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', textAlign: 'center', lineHeight: '1.2' }}>
+            Agenda Guru <br />
+            <span style={{ fontSize: '1rem', fontWeight: '500', color: 'var(--primary)' }}>SMKN 1 Arahan</span>
+          </h1>
+
+
           <p style={{ color: 'var(--text-muted)' }}>Sign in to continue</p>
         </div>
 
@@ -94,9 +111,7 @@ const LoginScreen = () => {
             {isLoading ? 'Memeriksa...' : 'Sign In'}
           </button>
         </form>
-        <p style={{ marginTop: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-          *Untuk Admin, gunakan username: <strong>admin</strong> dan password: <strong>admin123</strong>
-        </p>
+
       </div>
     </div>
   );

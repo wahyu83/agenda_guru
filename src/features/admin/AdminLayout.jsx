@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Calendar, Users, BookOpen, GraduationCap, FileText, LogOut } from 'lucide-react';
 import { useAppStore } from '../../lib/store';
@@ -6,8 +6,21 @@ import ProfileModal from '../../components/ProfileModal';
 
 const AdminLayout = () => {
   const navigate = useNavigate();
-  const { user } = useAppStore();
+  const { user, setUser } = useAppStore();
   const [showProfile, setShowProfile] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      navigate('/login', { replace: true });
+    }
+  }, [user, navigate]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+    navigate('/login', { replace: true });
+  };
 
   const navItems = [
     { name: 'Dashboard', path: '/admin', icon: <LayoutDashboard size={20} />, exact: true },
@@ -57,7 +70,7 @@ const AdminLayout = () => {
 
         <div style={{ padding: '1rem', borderTop: '1px solid var(--border-color)' }}>
           <button 
-            onClick={() => navigate('/login')}
+            onClick={handleLogout}
             className="btn btn-secondary w-full"
             style={{ color: 'var(--danger)', borderColor: 'var(--border-color)' }}
           >

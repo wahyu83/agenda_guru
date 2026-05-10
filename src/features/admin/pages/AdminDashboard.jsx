@@ -18,7 +18,8 @@ const AdminDashboard = () => {
     <div className="flex flex-col gap-4">
       <div>
         <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Dashboard</h1>
-        <p style={{ color: 'var(--text-muted)' }}>Ringkasan sistem Agenda Guru & Absensi Siswa.</p>
+        <p style={{ color: 'var(--text-muted)' }}>Ringkasan sistem Agenda guru SMKN 1 Arahan.</p>
+
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginTop: '1rem' }}>

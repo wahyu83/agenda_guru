@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { Home, Calendar, Clock, User, UserCog, WifiOff } from 'lucide-react';
 import { useAppStore } from '../../lib/store';
@@ -6,10 +6,23 @@ import ProfileModal from '../../components/ProfileModal';
 
 const GuruLayout = () => {
   const navigate = useNavigate();
-  const { user } = useAppStore();
+  const { user, setUser } = useAppStore();
   const [showProfile, setShowProfile] = useState(false);
   // Mock offline status
   const isOffline = false;
+
+  useEffect(() => {
+    if (!user) {
+      navigate('/login', { replace: true });
+    }
+  }, [user, navigate]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+    navigate('/login', { replace: true });
+  };
 
   return (
     <div className="mobile-layout">
@@ -34,7 +47,7 @@ const GuruLayout = () => {
             <WifiOff size={14} /> Offline Mode
           </div>
         ) : (
-          <button onClick={() => navigate('/login')} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}>
+          <button onClick={handleLogout} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}>
              Logout
           </button>
         )}

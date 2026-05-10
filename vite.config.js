@@ -11,8 +11,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icon.png'],
       manifest: {
-        name: 'Agenda Guru & Absensi Siswa',
-        short_name: 'Agenda Guru',
+        name: 'Agenda guru SMKN 1 Arahan',
+        short_name: 'Agenda Guru SMKN 1 Arahan',
+
         background_color: '#F8FAFC',
         display: 'standalone',
         icons: [

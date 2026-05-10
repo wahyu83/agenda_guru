@@ -18,7 +18,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/guru', guruRoutes);
 
 app.get('/', (req, res) => {
-  res.send('Agenda Guru API is running');
+  res.send('Agenda guru SMKN 1 Arahan API is running');
+
 });
 
 app.listen(PORT, () => {
