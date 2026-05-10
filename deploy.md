@@ -14,8 +14,8 @@ sudo apt update && sudo apt upgrade -y
 # 2. Install Node.js (menggunakan Node Version Manager / NVM)
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
 source ~/.bashrc
-nvm install 18
-nvm use 18
+nvm install 20
+nvm use 20
 
 # 3. Install PM2 (Untuk menjaga backend tetap menyala 24/7)
 npm install -g pm2
