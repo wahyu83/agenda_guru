@@ -1,14 +1,24 @@
 import React, { useState } from 'react';
-import { X, Key } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { X, Key, LogOut } from 'lucide-react';
 import { useAppStore } from '../lib/store';
 
 const ProfileModal = ({ user, onClose }) => {
-  const { changePassword } = useAppStore();
+  const navigate = useNavigate();
+  const { changePassword, setUser } = useAppStore();
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+    navigate('/login', { replace: true });
+    onClose();
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -93,6 +103,17 @@ const ProfileModal = ({ user, onClose }) => {
             Simpan Perubahan
           </button>
         </form>
+
+        <div style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+          <button 
+            onClick={handleLogout}
+            className="btn btn-secondary w-full"
+            style={{ color: 'var(--danger)', borderColor: 'var(--border-color)', justifyContent: 'center', display: 'flex', alignItems: 'center' }}
+          >
+            <LogOut size={18} style={{ marginRight: '0.5rem' }} />
+            Keluar (Logout)
+          </button>
+        </div>
       </div>
     </div>
   );

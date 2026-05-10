@@ -18,13 +18,6 @@ const GuruLayout = () => {
     }
   }, [user, navigate]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setUser(null);
-    navigate('/login', { replace: true });
-  };
-
   return (
     <div className="mobile-layout">
       {/* App Bar */}
@@ -43,15 +36,11 @@ const GuruLayout = () => {
           </div>
         </div>
         
-        {isOffline ? (
+        {isOffline && (
           <div className="flex items-center gap-1" style={{ backgroundColor: 'var(--warning)', padding: '0.25rem 0.5rem', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: '600' }}>
             <WifiOff size={14} /> Offline Mode
           </div>
-        ) : location.pathname.includes('/riwayat') ? (
-          <button onClick={handleLogout} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}>
-             Logout
-          </button>
-        ) : null}
+        )}
       </header>
 
       {/* Main Content Area */}
