@@ -89,7 +89,7 @@ const AbsensiEditScreen = () => {
         <Search size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
       </div>
 
-      <div className="flex flex-col gap-3" style={{ paddingBottom: '2rem' }}>
+      <div className="flex flex-col gap-3">
         {siswa.filter(s => s.nama.toLowerCase().includes(search.toLowerCase())).map((s) => (
           <div key={s.id} className="card" style={{ padding: '1rem' }}>
             <div className="flex justify-between items-center" style={{ marginBottom: '0.75rem' }}>
@@ -125,8 +125,8 @@ const AbsensiEditScreen = () => {
         ))}
       </div>
       
-      <div style={{ marginTop: '1rem', paddingBottom: '2rem' }}>
-        <button onClick={handleSave} disabled={isSaving} className="btn btn-primary w-full flex items-center justify-center gap-2" style={{ padding: '0.875rem', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-sm)' }}>
+      <div style={{ marginTop: '2.5rem', paddingBottom: '5rem' }}>
+        <button onClick={handleSave} disabled={isSaving} className="btn btn-primary w-full flex items-center justify-center gap-2" style={{ padding: '1rem', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-md)' }}>
           <Save size={20} /> {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
         </button>
       </div>
