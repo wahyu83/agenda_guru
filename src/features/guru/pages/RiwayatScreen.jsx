@@ -35,6 +35,25 @@ const RiwayatScreen = () => {
     document.body.removeChild(link);
   };
 
+  // --- CSV WITH HEADER (matching PDF kop) ---
+  const handleExportCSVWithHeader = (filename, title, columns, data) => {
+    let csvRows = [];
+    // Kop Sekolah
+    csvRows.push(['SMK NEGERI 1 ARAHAN']);
+    csvRows.push(['Jl. Raya Arahan, Kabupaten Indramayu, Jawa Barat']);
+    csvRows.push([]); // Separator
+    csvRows.push([title]);
+    csvRows.push([`Guru: ${user?.nama || '-'}`]);
+    csvRows.push([]); // Separator
+    // Table Header
+    csvRows.push(columns.map(c => c.header));
+    // Table Data
+    data.forEach(item => {
+      csvRows.push(columns.map(c => item[c.key] !== undefined ? item[c.key] : ''));
+    });
+    handleExportCSV(filename, csvRows);
+  };
+
   // --- PDF EXPORT LOGIC ---
   const handleExportPDF = (filename, title, columns, data) => {
     try {
@@ -84,16 +103,17 @@ const RiwayatScreen = () => {
       Materi: a.materi,
       Deskripsi: a.deskripsi
     }));
+    const columns = [
+      { header: 'Tanggal', key: 'Tanggal' },
+      { header: 'Kelas', key: 'Kelas' },
+      { header: 'Mapel', key: 'Mapel' },
+      { header: 'Materi', key: 'Materi' },
+      { header: 'Deskripsi', key: 'Deskripsi' }
+    ];
 
-    if (type === 'csv') handleExportCSV('Riwayat_Agenda_Pribadi', formatted);
-    else {
-      const columns = [
-        { header: 'Tanggal', key: 'Tanggal' },
-        { header: 'Kelas', key: 'Kelas' },
-        { header: 'Mapel', key: 'Mapel' },
-        { header: 'Materi', key: 'Materi' },
-        { header: 'Deskripsi', key: 'Deskripsi' }
-      ];
+    if (type === 'csv') {
+      handleExportCSVWithHeader('Riwayat_Agenda_Pribadi', 'Riwayat Jurnal Agenda Pribadi', columns, formatted);
+    } else {
       handleExportPDF('Riwayat_Agenda_Pribadi', 'Riwayat Jurnal Agenda Pribadi', columns, formatted);
     }
   };
@@ -152,15 +172,34 @@ const RiwayatScreen = () => {
     });
 
     if (type === 'csv') {
-      let finalCsvData = [];
+      // Create a matrix-style CSV matching PDF layout
+      let csvRows = [];
       matrices.forEach(m => {
-        finalCsvData.push({ No: `Kelas: ${m.kelas} | Mapel: ${m.mapel}` });
-        finalCsvData.push({});
-        finalCsvData = finalCsvData.concat(m.matrixData);
-        finalCsvData.push({});
-        finalCsvData.push({});
+        // Header info matching PDF
+        csvRows.push(['Buku Rekapitulasi Absensi Kelas']);
+        csvRows.push([`Kelas: ${m.kelas}    Mapel: ${m.mapel}    Guru: ${m.guru}`]);
+        csvRows.push(['Keterangan: H=Hadir, S=Sakit, I=Izin, A=Alpa']);
+        csvRows.push([]); // Spacer
+
+        // Table Header
+        const headerRow = ['No', 'Nama Siswa', ...m.dates, 'H', 'S', 'I', 'A'];
+        csvRows.push(headerRow);
+
+        // Data Rows
+        m.matrixData.forEach(row => {
+          const dataRow = [row.No, row.Nama];
+          m.dates.forEach(date => {
+            dataRow.push(row[date] || '-');
+          });
+          dataRow.push(row.H, row.S, row.I, row.A);
+          csvRows.push(dataRow);
+        });
+
+        // Spacers between matrices
+        csvRows.push([]);
+        csvRows.push([]);
       });
-      handleExportCSV('Riwayat_Absensi_Matrix', finalCsvData);
+      handleExportCSV('Riwayat_Absensi_Matrix', csvRows);
     } else {
       try {
         const doc = new jsPDF('landscape');

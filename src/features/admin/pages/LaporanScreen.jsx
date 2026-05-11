@@ -28,6 +28,24 @@ const LaporanScreen = () => {
     document.body.removeChild(link);
   };
 
+  // --- CSV WITH HEADER (matching PDF kop) ---
+  const handleExportCSVWithHeader = (filename, title, columns, data) => {
+    let csvRows = [];
+    // Kop Sekolah
+    csvRows.push(['SMK NEGERI 1 ARAHAN']);
+    csvRows.push(['Jl. Raya Arahan, Kabupaten Indramayu, Jawa Barat']);
+    csvRows.push([]); // Separator
+    csvRows.push([title]);
+    csvRows.push([]); // Separator
+    // Table Header
+    csvRows.push(columns.map(c => c.header));
+    // Table Data
+    data.forEach(item => {
+      csvRows.push(columns.map(c => item[c.key] !== undefined ? item[c.key] : ''));
+    });
+    handleExportCSV(filename, csvRows);
+  };
+
   // --- PDF EXPORT LOGIC ---
   const handleExportPDF = (filename, title, columns, data) => {
     try {
@@ -68,15 +86,15 @@ const LaporanScreen = () => {
       Nama: g.nama,
       Username: g.username
     }));
+    const columns = [
+      { header: 'NIP / NUPTK', key: 'NIP' },
+      { header: 'Nama Lengkap', key: 'Nama' },
+      { header: 'Username', key: 'Username' }
+    ];
     
     if (type === 'csv') {
-      handleExportCSV('Data_Guru', formatted);
+      handleExportCSVWithHeader('Data_Guru', 'Laporan Data Guru', columns, formatted);
     } else {
-      const columns = [
-        { header: 'NIP / NUPTK', key: 'NIP' },
-        { header: 'Nama Lengkap', key: 'Nama' },
-        { header: 'Username', key: 'Username' }
-      ];
       handleExportPDF('Data_Guru', 'Laporan Data Guru', columns, formatted);
     }
   };
@@ -95,16 +113,16 @@ const LaporanScreen = () => {
         Kelas: kelasName
       };
     });
+    const columns = [
+      { header: 'NIS / NISN', key: 'NIS' },
+      { header: 'Nama Lengkap', key: 'Nama' },
+      { header: 'Kelas Aktif', key: 'Kelas' }
+    ];
+    const title = `Laporan Data Siswa (Tahun ${tahunAktif ? tahunAktif.nama : '-'})`;
 
     if (type === 'csv') {
-      handleExportCSV('Data_Siswa', formatted);
+      handleExportCSVWithHeader('Data_Siswa', title, columns, formatted);
     } else {
-      const columns = [
-        { header: 'NIS / NISN', key: 'NIS' },
-        { header: 'Nama Lengkap', key: 'Nama' },
-        { header: 'Kelas Aktif', key: 'Kelas' }
-      ];
-      const title = `Laporan Data Siswa (Tahun ${tahunAktif ? tahunAktif.nama : '-'})`;
       handleExportPDF('Data_Siswa', title, columns, formatted);
     }
   };
@@ -115,15 +133,15 @@ const LaporanScreen = () => {
       JumlahSiswa: k.jumlahSiswa || 0,
       JumlahPengampu: k.jumlahPengampu || 0
     }));
+    const columns = [
+      { header: 'Nama Kelas', key: 'NamaKelas' },
+      { header: 'Jumlah Siswa', key: 'JumlahSiswa' },
+      { header: 'Jumlah Pengampu', key: 'JumlahPengampu' }
+    ];
 
     if (type === 'csv') {
-      handleExportCSV('Data_Kelas', formatted);
+      handleExportCSVWithHeader('Data_Kelas', 'Laporan Data Kelas', columns, formatted);
     } else {
-      const columns = [
-        { header: 'Nama Kelas', key: 'NamaKelas' },
-        { header: 'Jumlah Siswa', key: 'JumlahSiswa' },
-        { header: 'Jumlah Pengampu', key: 'JumlahPengampu' }
-      ];
       handleExportPDF('Data_Kelas', 'Laporan Data Kelas', columns, formatted);
     }
   };
@@ -145,17 +163,17 @@ const LaporanScreen = () => {
       Materi: a.materi,
       Deskripsi: a.deskripsi
     }));
+    const columns = [
+      { header: 'Tanggal', key: 'Tanggal' },
+      { header: 'Guru', key: 'Guru' },
+      { header: 'Kelas', key: 'Kelas' },
+      { header: 'Mapel', key: 'Mapel' },
+      { header: 'Materi', key: 'Materi' }
+    ];
 
     if (type === 'csv') {
-      handleExportCSV('Laporan_Agenda', formatted);
+      handleExportCSVWithHeader('Laporan_Agenda', 'Jurnal Agenda Mengajar', columns, formatted);
     } else {
-      const columns = [
-        { header: 'Tanggal', key: 'Tanggal' },
-        { header: 'Guru', key: 'Guru' },
-        { header: 'Kelas', key: 'Kelas' },
-        { header: 'Mapel', key: 'Mapel' },
-        { header: 'Materi', key: 'Materi' }
-      ];
       handleExportPDF('Laporan_Agenda', 'Jurnal Agenda Mengajar', columns, formatted);
     }
   };
@@ -215,14 +233,14 @@ const LaporanScreen = () => {
     });
 
     if (type === 'csv') {
-      // Create a matrix-style CSV (array of arrays)
+      // Create a matrix-style CSV matching PDF layout
       let csvRows = [];
       
       matrices.forEach((m, idx) => {
-        // Class header info
-        csvRows.push([`LAPORAN ABSENSI - ${m.kelas}`]);
-        csvRows.push([`Mata Pelajaran:`, m.mapel]);
-        csvRows.push([`Guru Pengampu:`, m.guru]);
+        // Header info matching PDF
+        csvRows.push(['Laporan Rekapitulasi Absensi Siswa']);
+        csvRows.push([`Kelas: ${m.kelas}    Mapel: ${m.mapel}    Guru: ${m.guru}`]);
+        csvRows.push(['Keterangan: H=Hadir, S=Sakit, I=Izin, A=Alpa']);
         csvRows.push([]); // Spacer
 
         // Table Header
