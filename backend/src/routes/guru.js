@@ -191,4 +191,54 @@ router.delete('/absensi/:id', async (req, res) => {
   }
 });
 
+// --- WALI KELAS ---
+router.get('/wali-kelas/:guruId', async (req, res) => {
+  try {
+    const kelasWali = await prisma.kelas.findMany({
+      where: { waliKelasId: parseInt(req.params.guruId) },
+      include: { 
+        tahunPelajaran: true,
+        _count: { select: { enrollment: true, pengampu: true } }
+      }
+    });
+    res.json(kelasWali);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal mengambil data wali kelas' });
+  }
+});
+
+router.get('/laporan-kelas/:kelasId', async (req, res) => {
+  try {
+    const kelasId = parseInt(req.params.kelasId);
+
+    // Get all pengampu for this class
+    const pengampuList = await prisma.pengampu.findMany({
+      where: { kelasId }
+    });
+    const pengampuIds = pengampuList.map(p => p.id);
+
+    const [agenda, absensi] = await Promise.all([
+      prisma.agenda.findMany({
+        where: { pengampuId: { in: pengampuIds } },
+        include: { pengampu: { include: { guru: true, kelas: true, mapel: true } } },
+        orderBy: { tanggal: 'desc' }
+      }),
+      prisma.absensi.findMany({
+        where: { pengampuId: { in: pengampuIds } },
+        include: {
+          pengampu: { include: { guru: true, kelas: true, mapel: true } },
+          siswaDetail: { include: { siswa: true } }
+        },
+        orderBy: { tanggal: 'desc' }
+      })
+    ]);
+
+    res.json({ agenda, absensi });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal mengambil laporan kelas' });
+  }
+});
+
 module.exports = router;

@@ -17,6 +17,7 @@ model User {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   pengampu  Pengampu[]
+  kelasWali Kelas[]    @relation("WaliKelas")
 }
 
 model TahunPelajaran {
@@ -37,9 +38,11 @@ model Kelas {
   id               Int            @id @default(autoincrement())
   nama             String
   tahunPelajaranId Int
+  waliKelasId      Int?
   enrollment       Enrollment[]
   tahunPelajaran   TahunPelajaran @relation(fields: [tahunPelajaranId], references: [id])
   pengampu         Pengampu[]
+  waliKelas        User?          @relation("WaliKelas", fields: [waliKelasId], references: [id])
 }
 
 model Siswa {

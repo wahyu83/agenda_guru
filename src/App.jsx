@@ -24,6 +24,7 @@ import AgendaScreen from './features/guru/pages/AgendaScreen';
 import AbsensiScreen from './features/guru/pages/AbsensiScreen';
 import RiwayatScreen from './features/guru/pages/RiwayatScreen';
 import AbsensiEditScreen from './features/guru/pages/AbsensiEditScreen';
+import WaliKelasScreen from './features/guru/pages/WaliKelasScreen';
 
 function App() {
   const fetchMasterData = useAppStore((state) => state.fetchMasterData);
@@ -59,6 +60,7 @@ function App() {
           <Route path="absensi/:tugasId" element={<AbsensiScreen />} />
           <Route path="riwayat" element={<RiwayatScreen />} />
           <Route path="absensi-edit/:absensiId" element={<AbsensiEditScreen />} />
+          <Route path="wali-kelas" element={<WaliKelasScreen />} />
         </Route>
 
         {/* Catch all */}

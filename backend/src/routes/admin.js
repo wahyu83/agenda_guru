@@ -128,6 +128,7 @@ router.get('/kelas', async (req, res) => {
   const data = await prisma.kelas.findMany({ 
     include: { 
       tahunPelajaran: true,
+      waliKelas: { select: { id: true, nama: true, nip: true } },
       _count: {
         select: { enrollment: true, pengampu: true }
       }
@@ -161,6 +162,21 @@ router.put('/kelas/:id', async (req, res) => {
     data: { nama: req.body.nama }
   });
   res.json(data);
+});
+
+router.put('/kelas/:id/wali', async (req, res) => {
+  try {
+    const { waliKelasId } = req.body;
+    const data = await prisma.kelas.update({
+      where: { id: parseInt(req.params.id) },
+      data: { waliKelasId: waliKelasId ? parseInt(waliKelasId) : null },
+      include: { waliKelas: { select: { id: true, nama: true, nip: true } } }
+    });
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal mengatur wali kelas' });
+  }
 });
 
 // --- SISWA ---

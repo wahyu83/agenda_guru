@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Calendar, Clock, User, UserCog, WifiOff } from 'lucide-react';
+import { Home, Calendar, Clock, User, UserCog, WifiOff, FileText } from 'lucide-react';
 import { useAppStore } from '../../lib/store';
 import ProfileModal from '../../components/ProfileModal';
 
 const GuruLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, setUser } = useAppStore();
+  const { user, setUser, kelasWali, fetchWaliKelas } = useAppStore();
   const [showProfile, setShowProfile] = useState(false);
   // Mock offline status
   const isOffline = false;
@@ -17,6 +17,12 @@ const GuruLayout = () => {
       navigate('/login', { replace: true });
     }
   }, [user, navigate]);
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchWaliKelas(user.id);
+    }
+  }, [user, fetchWaliKelas]);
 
   return (
     <div className="mobile-layout">
@@ -66,6 +72,16 @@ const GuruLayout = () => {
           <Clock size={24} />
           <span>Riwayat</span>
         </NavLink>
+        
+        {kelasWali.length > 0 && (
+          <NavLink 
+            to="/guru/wali-kelas" 
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+          >
+            <FileText size={24} />
+            <span>Laporan</span>
+          </NavLink>
+        )}
       </nav>
       {showProfile && user && (
         <ProfileModal user={user} onClose={() => setShowProfile(false)} />

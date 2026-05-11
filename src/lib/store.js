@@ -18,6 +18,8 @@ export const useAppStore = create((set, get) => ({
   riwayatGuru: { agenda: [], absensi: [] },
   laporanAgenda: [],
   laporanAbsensi: [],
+  kelasWali: [],
+  laporanKelas: { agenda: [], absensi: [] },
   user: JSON.parse(localStorage.getItem('user')) || null,
 
   setUser: (userData) => set({ user: userData }),
@@ -167,6 +169,20 @@ export const useAppStore = create((set, get) => ({
     });
     const newData = await res.json();
     set((state) => ({ kelas: state.kelas.map(item => item.id === id ? { ...item, nama: newData.nama } : item) }));
+  },
+
+  setWaliKelas: async (kelasId, waliKelasId) => {
+    const res = await fetch(`${API_BASE}/admin/kelas/${kelasId}/wali`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ waliKelasId })
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      set((state) => ({ kelas: state.kelas.map(item => item.id === kelasId ? { ...item, waliKelasId: updated.waliKelasId, waliKelas: updated.waliKelas } : item) }));
+    } else {
+      alert('Gagal mengatur wali kelas');
+    }
   },
 
   // --- SISWA ---
@@ -369,5 +385,26 @@ export const useAppStore = create((set, get) => ({
     });
     if (!res.ok) throw new Error('Gagal menyimpan absensi');
     return await res.json();
+  },
+
+  // --- WALI KELAS ---
+  fetchWaliKelas: async (guruId) => {
+    try {
+      const res = await fetch(`${API_BASE}/guru/wali-kelas/${guruId}`);
+      const data = await res.json();
+      set({ kelasWali: data });
+    } catch (err) {
+      console.error('Gagal fetch wali kelas:', err);
+    }
+  },
+
+  fetchLaporanKelas: async (kelasId) => {
+    try {
+      const res = await fetch(`${API_BASE}/guru/laporan-kelas/${kelasId}`);
+      const data = await res.json();
+      set({ laporanKelas: data });
+    } catch (err) {
+      console.error('Gagal fetch laporan kelas:', err);
+    }
   }
 }));

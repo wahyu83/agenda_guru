@@ -3,7 +3,7 @@ import { Plus, Edit2, Trash2, Users, LayoutDashboard, X } from 'lucide-react';
 import { useAppStore } from '../../../lib/store';
 
 const KelasScreen = () => {
-  const { kelas, guru, mapel, tahunPelajaran, pengampuAktif, fetchPengampu, addPengampu, deletePengampu, addKelas, deleteKelas, updateKelas } = useAppStore();
+  const { kelas, guru, mapel, tahunPelajaran, pengampuAktif, fetchPengampu, addPengampu, deletePengampu, addKelas, deleteKelas, updateKelas, setWaliKelas } = useAppStore();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [nama, setNama] = useState('');
@@ -107,6 +107,7 @@ const KelasScreen = () => {
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--surface-hover)' }}>
               <th style={{ padding: '1rem', color: 'var(--text-muted)', fontWeight: '600' }}>Nama Kelas</th>
+              <th style={{ padding: '1rem', color: 'var(--text-muted)', fontWeight: '600' }}>Wali Kelas</th>
               <th style={{ padding: '1rem', color: 'var(--text-muted)', fontWeight: '600' }}>Guru Pengampu</th>
               <th style={{ padding: '1rem', color: 'var(--text-muted)', fontWeight: '600' }}>Jumlah Siswa</th>
               <th style={{ padding: '1rem', color: 'var(--text-muted)', fontWeight: '600', textAlign: 'right' }}>Aksi</th>
@@ -119,6 +120,15 @@ const KelasScreen = () => {
                   <div className="flex items-center gap-2">
                     <LayoutDashboard size={18} /> {item.nama}
                   </div>
+                </td>
+                <td style={{ padding: '1rem' }}>
+                  {item.waliKelas ? (
+                    <span style={{ padding: '0.25rem 0.75rem', backgroundColor: 'var(--success)20', color: 'var(--success)', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: '600' }}>
+                      {item.waliKelas.nama}
+                    </span>
+                  ) : (
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Belum ditentukan</span>
+                  )}
                 </td>
                 <td style={{ padding: '1rem' }}>
                   <span style={{ padding: '0.25rem 0.75rem', backgroundColor: 'var(--info)20', color: 'var(--info)', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: '600' }}>
@@ -229,6 +239,28 @@ const KelasScreen = () => {
                 </table>
               </>
             )}
+
+            {/* Wali Kelas Assignment */}
+            <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.5rem' }}>Wali Kelas</h3>
+              <div className="flex gap-2 items-end">
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.875rem' }}>Pilih Guru sebagai Wali Kelas</label>
+                  <select 
+                    className="input" 
+                    value={selectedKelas?.waliKelasId || ''}
+                    onChange={async (e) => {
+                      const val = e.target.value;
+                      await setWaliKelas(selectedKelas.id, val || null);
+                      setSelectedKelas({ ...selectedKelas, waliKelasId: val ? parseInt(val) : null });
+                    }}
+                  >
+                    <option value="">-- Tidak Ada --</option>
+                    {guru.map(g => <option key={g.id} value={g.id}>{g.nama} ({g.nip || '-'})</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
