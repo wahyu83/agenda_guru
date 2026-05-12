@@ -168,37 +168,6 @@ router.get('/riwayat/:guruId', async (req, res) => {
 });
 
 // --- NILAI ---
-router.get('/nilai/:kelasId', async (req, res) => {
-  try {
-    const kelasId = parseInt(req.params.kelasId);
-    const { mapelId } = req.query;
-
-    const pengampuWhere = { kelasId };
-    if (mapelId) pengampuWhere.mapelId = parseInt(mapelId);
-
-    const pengampuList = await prisma.pengampu.findMany({
-      where: pengampuWhere,
-      include: { guru: { select: { id: true, nama: true } }, mapel: { select: { id: true, nama: true } } }
-    });
-
-    const pengampuIds = pengampuList.map(p => p.id);
-
-    const nilai = await prisma.nilai.findMany({
-      where: { pengampuId: { in: pengampuIds } },
-      include: {
-        siswa: { select: { id: true, nama: true, nis: true } },
-        pengampu: { include: { guru: { select: { id: true, nama: true } }, mapel: { select: { id: true, nama: true } } } }
-      },
-      orderBy: [{ tanggal: 'desc' }, { createdAt: 'asc' }]
-    });
-
-    res.json({ nilai, pengampu: pengampuList });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Gagal mengambil data nilai' });
-  }
-});
-
 router.post('/nilai', async (req, res) => {
   try {
     const { pengampuId, dataNilai } = req.body;
@@ -222,23 +191,54 @@ router.post('/nilai', async (req, res) => {
   }
 });
 
-router.put('/nilai/:id', async (req, res) => {
+router.get('/nilai-riwayat/:guruId', async (req, res) => {
   try {
-    const { jenis, nilai, deskripsi } = req.body;
-    const data = await prisma.nilai.update({
-      where: { id: parseInt(req.params.id) },
-      data: {
-        jenis: jenis || 'tugas',
-        nilai: parseFloat(nilai),
-        deskripsi: deskripsi || '',
-        last_modified: new Date()
-      },
-      include: { siswa: { select: { id: true, nama: true, nis: true } } }
+    const pengampu = await prisma.pengampu.findMany({
+      where: { guruId: parseInt(req.params.guruId) }
     });
-    res.json(data);
+    const pengampuIds = pengampu.map(p => p.id);
+
+    const nilai = await prisma.nilai.findMany({
+      where: { pengampuId: { in: pengampuIds } },
+      include: {
+        siswa: { select: { id: true, nama: true, nis: true } },
+        pengampu: { include: { kelas: { select: { id: true, nama: true } }, mapel: { select: { id: true, nama: true } } } }
+      },
+      orderBy: { tanggal: 'desc' }
+    });
+
+    res.json(nilai);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Gagal update nilai' });
+    res.status(500).json({ error: 'Gagal mengambil riwayat nilai' });
+  }
+});
+
+router.get('/nilai-session/:pengampuId', async (req, res) => {
+  try {
+    const { tanggal, jenis, deskripsi } = req.query;
+    const where = {
+      pengampuId: parseInt(req.params.pengampuId),
+      tanggal: new Date(tanggal),
+      jenis: jenis || 'tugas',
+    };
+    if (deskripsi) {
+      where.deskripsi = deskripsi;
+    } else {
+      where.OR = [{ deskripsi: null }, { deskripsi: '' }];
+    }
+    const nilai = await prisma.nilai.findMany({
+      where,
+      include: {
+        siswa: { select: { id: true, nama: true, nis: true } },
+        pengampu: { include: { kelas: { select: { id: true, nama: true } }, mapel: { select: { id: true, nama: true } } } }
+      },
+      orderBy: { createdAt: 'asc' }
+    });
+    res.json(nilai);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal mengambil session nilai' });
   }
 });
 
@@ -274,6 +274,102 @@ router.get('/nilai-export/:kelasId', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Gagal export nilai' });
+  }
+});
+
+router.put('/nilai/batch', async (req, res) => {
+  try {
+    const { pengampuId, dataNilai } = req.body;
+    const first = dataNilai[0];
+    const delWhere = {
+      pengampuId: parseInt(pengampuId),
+      tanggal: new Date(first.tanggal),
+      jenis: first.jenis || 'tugas',
+    };
+    if (first.deskripsi) {
+      delWhere.deskripsi = first.deskripsi;
+    } else {
+      delWhere.OR = [{ deskripsi: null }, { deskripsi: '' }];
+    }
+    await prisma.nilai.deleteMany({ where: delWhere });
+
+    const payloads = dataNilai.map(d => ({
+      pengampuId: parseInt(pengampuId),
+      siswaId: parseInt(d.siswaId),
+      enrollmentId: parseInt(d.enrollmentId),
+      tanggal: new Date(d.tanggal),
+      jenis: d.jenis || 'tugas',
+      nilai: parseFloat(d.nilai),
+      deskripsi: d.deskripsi || '',
+      last_modified: new Date()
+    }));
+
+    await prisma.nilai.createMany({ data: payloads });
+    res.json({ success: true, count: payloads.length });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal batch update nilai' });
+  }
+});
+
+router.put('/nilai/:id', async (req, res) => {
+  try {
+    const { jenis, nilai, deskripsi } = req.body;
+    const data = await prisma.nilai.update({
+      where: { id: parseInt(req.params.id) },
+      data: {
+        jenis: jenis || 'tugas',
+        nilai: parseFloat(nilai),
+        deskripsi: deskripsi || '',
+        last_modified: new Date()
+      },
+      include: { siswa: { select: { id: true, nama: true, nis: true } } }
+    });
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal update nilai' });
+  }
+});
+
+router.delete('/nilai/:id', async (req, res) => {
+  try {
+    await prisma.nilai.delete({ where: { id: parseInt(req.params.id) } });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Gagal menghapus nilai' });
+  }
+});
+
+// Must be last to avoid matching /nilai-session, /nilai-riwayat, etc.
+router.get('/nilai/:kelasId', async (req, res) => {
+  try {
+    const kelasId = parseInt(req.params.kelasId);
+    const { mapelId } = req.query;
+
+    const pengampuWhere = { kelasId };
+    if (mapelId) pengampuWhere.mapelId = parseInt(mapelId);
+
+    const pengampuList = await prisma.pengampu.findMany({
+      where: pengampuWhere,
+      include: { guru: { select: { id: true, nama: true } }, mapel: { select: { id: true, nama: true } } }
+    });
+
+    const pengampuIds = pengampuList.map(p => p.id);
+
+    const nilai = await prisma.nilai.findMany({
+      where: { pengampuId: { in: pengampuIds } },
+      include: {
+        siswa: { select: { id: true, nama: true, nis: true } },
+        pengampu: { include: { guru: { select: { id: true, nama: true } }, mapel: { select: { id: true, nama: true } } } }
+      },
+      orderBy: [{ tanggal: 'desc' }, { createdAt: 'asc' }]
+    });
+
+    res.json({ nilai, pengampu: pengampuList });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal mengambil data nilai' });
   }
 });
 
@@ -324,94 +420,6 @@ router.get('/laporan-kelas/:kelasId', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Gagal mengambil laporan kelas' });
-  }
-});
-
-router.get('/nilai-riwayat/:guruId', async (req, res) => {
-  try {
-    const pengampu = await prisma.pengampu.findMany({
-      where: { guruId: parseInt(req.params.guruId) }
-    });
-    const pengampuIds = pengampu.map(p => p.id);
-
-    const nilai = await prisma.nilai.findMany({
-      where: { pengampuId: { in: pengampuIds } },
-      include: {
-        siswa: { select: { id: true, nama: true, nis: true } },
-        pengampu: { include: { kelas: { select: { id: true, nama: true } }, mapel: { select: { id: true, nama: true } } } }
-      },
-      orderBy: { tanggal: 'desc' }
-    });
-
-    res.json(nilai);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Gagal mengambil riwayat nilai' });
-  }
-});
-
-router.delete('/nilai/:id', async (req, res) => {
-  try {
-    await prisma.nilai.delete({ where: { id: parseInt(req.params.id) } });
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: 'Gagal menghapus nilai' });
-  }
-});
-
-router.get('/nilai-session/:pengampuId', async (req, res) => {
-  try {
-    const { tanggal, jenis, deskripsi } = req.query;
-    const nilai = await prisma.nilai.findMany({
-      where: {
-        pengampuId: parseInt(req.params.pengampuId),
-        tanggal: new Date(tanggal),
-        jenis: jenis || 'tugas',
-        deskripsi: deskripsi || ''
-      },
-      include: {
-        siswa: { select: { id: true, nama: true, nis: true } },
-        pengampu: { include: { kelas: { select: { id: true, nama: true } }, mapel: { select: { id: true, nama: true } } } }
-      },
-      orderBy: { createdAt: 'asc' }
-    });
-    res.json(nilai);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Gagal mengambil session nilai' });
-  }
-});
-
-router.put('/nilai/batch', async (req, res) => {
-  try {
-    const { pengampuId, dataNilai } = req.body;
-    // Delete existing nilai for this session, then re-create
-    const first = dataNilai[0];
-    await prisma.nilai.deleteMany({
-      where: {
-        pengampuId: parseInt(pengampuId),
-        tanggal: new Date(first.tanggal),
-        jenis: first.jenis || 'tugas',
-        deskripsi: first.deskripsi || ''
-      }
-    });
-
-    const payloads = dataNilai.map(d => ({
-      pengampuId: parseInt(pengampuId),
-      siswaId: parseInt(d.siswaId),
-      enrollmentId: parseInt(d.enrollmentId),
-      tanggal: new Date(d.tanggal),
-      jenis: d.jenis || 'tugas',
-      nilai: parseFloat(d.nilai),
-      deskripsi: d.deskripsi || '',
-      last_modified: new Date()
-    }));
-
-    await prisma.nilai.createMany({ data: payloads });
-    res.json({ success: true, count: payloads.length });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Gagal batch update nilai' });
   }
 });
 
