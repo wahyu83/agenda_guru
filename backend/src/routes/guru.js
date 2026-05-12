@@ -233,7 +233,7 @@ router.get('/nilai-session/:pengampuId', async (req, res) => {
         siswa: { select: { id: true, nama: true, nis: true } },
         pengampu: { include: { kelas: { select: { id: true, nama: true } }, mapel: { select: { id: true, nama: true } } } }
       },
-      orderBy: { createdAt: 'asc' }
+      orderBy: { id: 'asc' }
     });
     res.json(nilai);
   } catch (err) {
@@ -263,7 +263,7 @@ router.get('/nilai-export/:kelasId', async (req, res) => {
         siswa: { select: { id: true, nama: true, nis: true } },
         pengampu: { include: { guru: { select: { id: true, nama: true } }, mapel: { select: { id: true, nama: true } } } }
       },
-      orderBy: [{ tanggal: 'asc' }, { createdAt: 'asc' }]
+      orderBy: [{ tanggal: 'asc' }, { id: 'asc' }]
     });
 
     if (format === 'json') {
@@ -363,7 +363,7 @@ router.get('/nilai/:kelasId', async (req, res) => {
         siswa: { select: { id: true, nama: true, nis: true } },
         pengampu: { include: { guru: { select: { id: true, nama: true } }, mapel: { select: { id: true, nama: true } } } }
       },
-      orderBy: [{ tanggal: 'desc' }, { createdAt: 'asc' }]
+      orderBy: [{ tanggal: 'desc' }, { id: 'asc' }]
     });
 
     res.json({ nilai, pengampu: pengampuList });
