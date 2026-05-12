@@ -70,6 +70,12 @@ const AgendaScreen = () => {
         >
           Absensi
         </button>
+        <button 
+          onClick={() => navigate(`/guru/nilai/${tugasId}`)}
+          style={{ flex: 1, padding: '0.75rem', border: 'none', background: 'none', color: 'var(--text-muted)', fontWeight: '500' }}
+        >
+          Nilai
+        </button>
       </div>
 
       <div className="card" style={{ padding: '1rem' }}>

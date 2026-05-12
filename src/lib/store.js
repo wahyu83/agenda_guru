@@ -21,6 +21,7 @@ export const useAppStore = create((set, get) => ({
   laporanAbsensi: [],
   kelasWali: [],
   laporanKelas: { agenda: [], absensi: [] },
+  nilaiKelas: { nilai: [], pengampu: [] },
   user: JSON.parse(localStorage.getItem('user')) || null,
 
   setUser: (userData) => set({ user: userData }),
@@ -428,6 +429,51 @@ export const useAppStore = create((set, get) => ({
       set({ laporanKelas: data });
     } catch (err) {
       console.error('Gagal fetch laporan kelas:', err);
+    }
+  },
+
+  // --- NILAI ---
+  fetchNilaiKelas: async (kelasId, mapelId = null) => {
+    try {
+      let url = `${API_BASE}/guru/nilai/${kelasId}`;
+      if (mapelId) url += `?mapelId=${mapelId}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      set({ nilaiKelas: data });
+    } catch (err) {
+      console.error('Gagal fetch nilai kelas:', err);
+    }
+  },
+
+  saveNilai: async (pengampuId, dataNilai) => {
+    const res = await fetch(`${API_BASE}/guru/nilai`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pengampuId, dataNilai })
+    });
+    if (!res.ok) throw new Error('Gagal menyimpan nilai');
+    return await res.json();
+  },
+
+  updateNilai: async (id, data) => {
+    const res = await fetch(`${API_BASE}/guru/nilai/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Gagal update nilai');
+    return await res.json();
+  },
+
+  fetchNilaiExport: async (kelasId, mapelId = null) => {
+    try {
+      let url = `${API_BASE}/guru/nilai-export/${kelasId}?format=json`;
+      if (mapelId) url += `&mapelId=${mapelId}`;
+      const res = await fetch(url);
+      return await res.json();
+    } catch (err) {
+      console.error('Gagal export nilai:', err);
+      return null;
     }
   }
 }));

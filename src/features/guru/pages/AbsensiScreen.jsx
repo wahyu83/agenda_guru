@@ -90,6 +90,12 @@ const AbsensiScreen = () => {
         >
           Absensi
         </button>
+        <button 
+          onClick={() => navigate(`/guru/nilai/${tugasId}`)}
+          style={{ flex: 1, padding: '0.75rem', border: 'none', background: 'none', color: 'var(--text-muted)', fontWeight: '500' }}
+        >
+          Nilai
+        </button>
       </div>
 
       <div style={{ marginBottom: '0.5rem' }}>

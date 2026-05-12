@@ -73,6 +73,7 @@ model Pengampu {
   jamSampai Int         @default(1)
   absensi Absensi[]
   agenda  Agenda[]
+  nilai   Nilai[]
   guru    User          @relation(fields: [guruId], references: [id], onDelete: Cascade)
   kelas   Kelas         @relation(fields: [kelasId], references: [id], onDelete: Cascade)
   mapel   MataPelajaran @relation(fields: [mapelId], references: [id], onDelete: Cascade)
@@ -107,4 +108,19 @@ model AbsensiSiswa {
   status    String
   absensi   Absensi @relation(fields: [absensiId], references: [id], onDelete: Cascade)
   siswa     Siswa   @relation(fields: [siswaId], references: [id], onDelete: Cascade)
+}
+
+model Nilai {
+  id            Int      @id @default(autoincrement())
+  pengampuId    Int
+  enrollmentId  Int
+  siswaId       Int
+  jenis         String   @default("tugas")
+  nilai         Float
+  tanggal       DateTime @db.Date
+  deskripsi     String?
+  last_modified DateTime @default(now())
+  pengampu      Pengampu @relation(fields: [pengampuId], references: [id], onDelete: Cascade)
+  enrollment    Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  siswa         Siswa    @relation(fields: [siswaId], references: [id], onDelete: Cascade)
 }
