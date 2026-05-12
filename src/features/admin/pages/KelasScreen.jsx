@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Users, LayoutDashboard, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, Users, LayoutDashboard, X, Check, Undo2 } from 'lucide-react';
 import { useAppStore } from '../../../lib/store';
 
 const KelasScreen = () => {
-  const { kelas, guru, mapel, tahunPelajaran, pengampuAktif, fetchPengampu, addPengampu, deletePengampu, addKelas, deleteKelas, updateKelas, setWaliKelas } = useAppStore();
+  const { kelas, guru, mapel, tahunPelajaran, pengampuAktif, fetchPengampu, addPengampu, updatePengampu, deletePengampu, addKelas, deleteKelas, updateKelas, setWaliKelas } = useAppStore();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [nama, setNama] = useState('');
@@ -12,6 +12,7 @@ const KelasScreen = () => {
   const [showPengampuModal, setShowPengampuModal] = useState(false);
   const [selectedKelas, setSelectedKelas] = useState(null);
   const [pengampuForm, setPengampuForm] = useState({ guruId: '', mapelId: '', hari: 'Senin', jamKe: '1', jamSampai: '1' });
+  const [editingPengampuId, setEditingPengampuId] = useState(null);
 
   const HARI = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
   const JAM_KE = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
@@ -32,18 +33,48 @@ const KelasScreen = () => {
   const handleAddPengampu = async (e) => {
     e.preventDefault();
     if (pengampuForm.guruId && pengampuForm.mapelId && tahunAktif) {
-      const success = await addPengampu({
-        guruId: pengampuForm.guruId,
-        mapelId: pengampuForm.mapelId,
-        kelasId: selectedKelas.id,
-        hari: pengampuForm.hari,
-        jamKe: pengampuForm.jamKe,
-        jamSampai: pengampuForm.jamSampai
-      });
-      if (success) {
-        setPengampuForm({ guruId: '', mapelId: '', hari: 'Senin', jamKe: '1', jamSampai: '1' });
+      if (editingPengampuId) {
+        const success = await updatePengampu(editingPengampuId, {
+          guruId: pengampuForm.guruId,
+          mapelId: pengampuForm.mapelId,
+          hari: pengampuForm.hari,
+          jamKe: pengampuForm.jamKe,
+          jamSampai: pengampuForm.jamSampai
+        });
+        if (success) {
+          setEditingPengampuId(null);
+          setPengampuForm({ guruId: '', mapelId: '', hari: 'Senin', jamKe: '1', jamSampai: '1' });
+        }
+      } else {
+        const success = await addPengampu({
+          guruId: pengampuForm.guruId,
+          mapelId: pengampuForm.mapelId,
+          kelasId: selectedKelas.id,
+          hari: pengampuForm.hari,
+          jamKe: pengampuForm.jamKe,
+          jamSampai: pengampuForm.jamSampai
+        });
+        if (success) {
+          setPengampuForm({ guruId: '', mapelId: '', hari: 'Senin', jamKe: '1', jamSampai: '1' });
+        }
       }
     }
+  };
+
+  const handleEditPengampu = (item) => {
+    setEditingPengampuId(item.id);
+    setPengampuForm({
+      guruId: item.guruId.toString(),
+      mapelId: item.mapelId.toString(),
+      hari: item.hari,
+      jamKe: item.jamKe.toString(),
+      jamSampai: item.jamSampai.toString()
+    });
+  };
+
+  const handleCancelEditPengampu = () => {
+    setEditingPengampuId(null);
+    setPengampuForm({ guruId: '', mapelId: '', hari: 'Senin', jamKe: '1', jamSampai: '1' });
   };
 
   const handleEditClick = (item) => {
@@ -227,7 +258,14 @@ const KelasScreen = () => {
                     </select>
                   </div>
                   <div>
-                    <button type="submit" className="btn btn-primary w-full" style={{ padding: '0.6rem' }}><Plus size={18} /> Tambah</button>
+                    {editingPengampuId && (
+                      <button type="button" className="btn btn-secondary w-full" style={{ padding: '0.6rem' }} onClick={handleCancelEditPengampu}>
+                        <Undo2 size={18} />
+                      </button>
+                    )}
+                    <button type="submit" className="btn btn-primary w-full" style={{ padding: '0.6rem', marginTop: editingPengampuId ? '0.25rem' : 0 }}>
+                      {editingPengampuId ? <><Check size={18} /> Simpan</> : <><Plus size={18} /> Tambah</>}
+                    </button>
                   </div>
                 </form>
 
@@ -244,21 +282,33 @@ const KelasScreen = () => {
                   </thead>
                   <tbody>
                     {pengampuAktif.length === 0 ? (
-                      <tr><td colSpan="3" style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)' }}>Belum ada guru pengampu di kelas ini.</td></tr>
+                      <tr><td colSpan="5" style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)' }}>Belum ada guru pengampu di kelas ini.</td></tr>
                     ) : (
                       pengampuAktif.map(item => (
-                        <tr key={item.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                        <tr key={item.id} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: editingPengampuId === item.id ? 'var(--info)10' : 'transparent' }}>
                           <td style={{ padding: '0.75rem', fontWeight: '500' }}>{item.mapel?.nama}</td>
                           <td style={{ padding: '0.75rem' }}>{item.guru?.nama}</td>
                           <td style={{ padding: '0.75rem' }}>{item.hari}</td>
                           <td style={{ padding: '0.75rem' }}>{item.jamKe === item.jamSampai ? item.jamKe : `${item.jamKe}-${item.jamSampai}`}</td>
                           <td style={{ padding: '0.75rem', textAlign: 'right' }}>
-                            <button 
-                              onClick={() => { if(window.confirm('Hapus pengampu ini?')) deletePengampu(item.id) }}
-                              style={{ color: 'var(--danger)', padding: '0.25rem' }}
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                            <div className="flex justify-end gap-1">
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); handleEditPengampu(item); }}
+                                className="btn btn-secondary"
+                                style={{ padding: '0.25rem', color: 'var(--info)', display: 'flex', alignItems: 'center' }}
+                                title="Edit"
+                              >
+                                <Edit2 size={14} />
+                              </button>
+                              <button 
+                                onClick={() => { if(window.confirm('Hapus pengampu ini?')) deletePengampu(item.id) }}
+                                className="btn btn-secondary"
+                                style={{ padding: '0.25rem', color: 'var(--danger)', display: 'flex', alignItems: 'center' }}
+                                title="Hapus"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))

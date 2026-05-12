@@ -304,6 +304,26 @@ router.get('/laporan/absensi', async (req, res) => {
   res.json(data);
 });
 
+router.put('/pengampu/:id', async (req, res) => {
+  try {
+    const { guruId, mapelId, hari, jamKe, jamSampai } = req.body;
+    const data = await prisma.pengampu.update({
+      where: { id: parseInt(req.params.id) },
+      data: {
+        guruId: parseInt(guruId),
+        mapelId: parseInt(mapelId),
+        hari: hari || 'Senin',
+        jamKe: parseInt(jamKe) || 1,
+        jamSampai: parseInt(jamSampai) || parseInt(jamKe) || 1
+      },
+      include: { guru: true, mapel: true }
+    });
+    res.json(data);
+  } catch (err) {
+    res.status(400).json({ error: 'Gagal mengupdate pengampu.' });
+  }
+});
+
 router.delete('/pengampu/:id', async (req, res) => {
   await prisma.pengampu.delete({ where: { id: parseInt(req.params.id) } });
   res.json({ success: true });

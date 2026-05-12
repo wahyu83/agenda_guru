@@ -270,6 +270,22 @@ export const useAppStore = create((set, get) => ({
     }
   },
 
+  updatePengampu: async (id, data) => {
+    const res = await fetch(`${API_BASE}/admin/pengampu/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      set((state) => ({ pengampuAktif: state.pengampuAktif.map(item => item.id === id ? updated : item) }));
+      return true;
+    } else {
+      alert("Gagal mengupdate pengampu.");
+      return false;
+    }
+  },
+
   deletePengampu: async (id) => {
     await fetch(`${API_BASE}/admin/pengampu/${id}`, { method: 'DELETE' });
     set((state) => ({ pengampuAktif: state.pengampuAktif.filter(item => item.id !== id) }));
