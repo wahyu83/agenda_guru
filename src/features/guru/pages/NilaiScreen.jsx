@@ -6,7 +6,7 @@ import { useAppStore } from '../../../lib/store';
 const NilaiScreen = () => {
   const { tugasId } = useParams();
   const navigate = useNavigate();
-  const { tugasGuru, siswaKelasAktif, fetchSiswaKelas, saveNilai, fetchNilaiKelas, nilaiKelas } = useAppStore();
+  const { tugasGuru, siswaKelasAktif, fetchSiswaKelas, saveNilai } = useAppStore();
 
   const currentTugas = tugasGuru.find(t => t.id === parseInt(tugasId));
 
@@ -20,29 +20,22 @@ const NilaiScreen = () => {
   useEffect(() => {
     if (currentTugas?.kelasId) {
       fetchSiswaKelas(currentTugas.kelasId);
-      fetchNilaiKelas(currentTugas.kelasId, currentTugas.mapelId);
     }
-  }, [currentTugas, fetchSiswaKelas, fetchNilaiKelas]);
+  }, [currentTugas, fetchSiswaKelas]);
 
   useEffect(() => {
     if (siswaKelasAktif.length > 0) {
-      const existingNilai = nilaiKelas.nilai || [];
-      const formatted = siswaKelasAktif.map(s => {
-        const existing = existingNilai.find(n => n.siswaId === s.id);
-        return {
-          id: existing?.id || null,
-          siswaId: s.id,
-          enrollmentId: s.enrollmentId || 0,
-          nama: s.nama,
-          nis: s.nis,
-          nilai: existing?.nilai ?? '',
-          jenis: existing?.jenis || jenis,
-          deskripsi: existing?.deskripsi || '',
-        };
-      });
+      const formatted = siswaKelasAktif.map(s => ({
+        id: null,
+        siswaId: s.id,
+        enrollmentId: s.enrollmentId || 0,
+        nama: s.nama,
+        nis: s.nis,
+        nilai: '',
+      }));
       setSiswa(formatted);
     }
-  }, [siswaKelasAktif, nilaiKelas]);
+  }, [siswaKelasAktif]);
 
   const updateNilai = (siswaId, val) => {
     setSiswa(siswa.map(s => s.siswaId === siswaId ? { ...s, nilai: val } : s));
@@ -69,9 +62,6 @@ const NilaiScreen = () => {
     try {
       await saveNilai(parseInt(tugasId), dataNilai);
       alert('Nilai berhasil disimpan!');
-      if (currentTugas?.kelasId) {
-        fetchNilaiKelas(currentTugas.kelasId, currentTugas.mapelId);
-      }
     } catch (error) {
       console.error(error);
       alert('Gagal menyimpan nilai.');
