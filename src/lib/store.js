@@ -16,7 +16,7 @@ export const useAppStore = create((set, get) => ({
   tugasGuru: [], // Jadwal mengajar untuk guru yang login
   jadwalGuru: [], // Jadwal mengajar dengan status agenda hari ini
   siswaKelasAktif: [], // Daftar siswa untuk kelas yang dipilih guru
-  riwayatGuru: { agenda: [], absensi: [] },
+  riwayatGuru: { agenda: [], absensi: [], nilai: [] },
   laporanAgenda: [],
   laporanAbsensi: [],
   kelasWali: [],
@@ -463,6 +463,22 @@ export const useAppStore = create((set, get) => ({
     });
     if (!res.ok) throw new Error('Gagal update nilai');
     return await res.json();
+  },
+
+  deleteNilai: async (id) => {
+    const res = await fetch(`${API_BASE}/guru/nilai/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Gagal menghapus nilai');
+    return await res.json();
+  },
+
+  fetchRiwayatNilai: async (guruId) => {
+    try {
+      const res = await fetch(`${API_BASE}/guru/nilai-riwayat/${guruId}`);
+      const data = await res.json();
+      set((state) => ({ riwayatGuru: { ...state.riwayatGuru, nilai: data } }));
+    } catch (err) {
+      console.error('Gagal fetch riwayat nilai:', err);
+    }
   },
 
   fetchNilaiExport: async (kelasId, mapelId = null) => {

@@ -327,4 +327,36 @@ router.get('/laporan-kelas/:kelasId', async (req, res) => {
   }
 });
 
+router.get('/nilai-riwayat/:guruId', async (req, res) => {
+  try {
+    const pengampu = await prisma.pengampu.findMany({
+      where: { guruId: parseInt(req.params.guruId) }
+    });
+    const pengampuIds = pengampu.map(p => p.id);
+
+    const nilai = await prisma.nilai.findMany({
+      where: { pengampuId: { in: pengampuIds } },
+      include: {
+        siswa: { select: { id: true, nama: true, nis: true } },
+        pengampu: { include: { kelas: { select: { id: true, nama: true } }, mapel: { select: { id: true, nama: true } } } }
+      },
+      orderBy: { tanggal: 'desc' }
+    });
+
+    res.json(nilai);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal mengambil riwayat nilai' });
+  }
+});
+
+router.delete('/nilai/:id', async (req, res) => {
+  try {
+    await prisma.nilai.delete({ where: { id: parseInt(req.params.id) } });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Gagal menghapus nilai' });
+  }
+});
+
 module.exports = router;

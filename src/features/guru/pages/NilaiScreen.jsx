@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Search, FileText, Download } from 'lucide-react';
+import { ArrowLeft, Save, Search } from 'lucide-react';
 import { useAppStore } from '../../../lib/store';
-import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
 
 const NilaiScreen = () => {
   const { tugasId } = useParams();
@@ -82,77 +80,6 @@ const NilaiScreen = () => {
     }
   };
 
-  const exportPDF = () => {
-    const values = nilaiKelas.nilai || [];
-    if (values.length === 0) {
-      alert('Tidak ada data nilai untuk diekspor.');
-      return;
-    }
-
-    const doc = new jsPDF();
-    doc.setFontSize(14);
-    doc.text('Laporan Nilai Siswa', 14, 20);
-    doc.setFontSize(10);
-    doc.text(`Kelas: ${currentTugas?.kelas?.nama || '-'}`, 14, 28);
-    doc.text(`Mata Pelajaran: ${currentTugas?.mapel?.nama || '-'}`, 14, 34);
-
-    const grouped = {};
-    values.forEach(v => {
-      const key = v.siswaId;
-      if (!grouped[key]) grouped[key] = { siswa: v.siswa, data: [] };
-      grouped[key].data.push(v);
-    });
-
-    const rows = [];
-    Object.values(grouped).forEach(g => {
-      g.data.forEach((n, idx) => {
-        rows.push([
-          idx === 0 ? g.siswa?.nama || '-' : '',
-          idx === 0 ? g.siswa?.nis || '-' : '',
-          n.jenis === 'ulangan' ? 'Ulangan' : 'Tugas',
-          n.nilai,
-          n.tanggal ? new Date(n.tanggal).toLocaleDateString('id-ID') : '-',
-          n.deskripsi || '-',
-        ]);
-      });
-    });
-
-    doc.autoTable({
-      startY: 40,
-      head: [['Nama', 'NIS', 'Jenis', 'Nilai', 'Tanggal', 'Deskripsi']],
-      body: rows,
-      styles: { fontSize: 8 },
-    });
-
-    doc.save(`nilai-${currentTugas?.kelas?.nama || 'kelas'}-${currentTugas?.mapel?.nama || 'mapel'}.pdf`);
-  };
-
-  const exportCSV = () => {
-    const values = nilaiKelas.nilai || [];
-    if (values.length === 0) {
-      alert('Tidak ada data nilai untuk diekspor.');
-      return;
-    }
-
-    const header = 'Nama,NIS,Jenis,Nilai,Tanggal,Deskripsi\n';
-    const rows = values.map(n => {
-      const nama = `"${(n.siswa?.nama || '').replace(/"/g, '""')}"`;
-      const nis = `"${(n.siswa?.nis || '').replace(/"/g, '""')}"`;
-      const j = n.jenis === 'ulangan' ? 'Ulangan' : 'Tugas';
-      const d = `"${(n.deskripsi || '').replace(/"/g, '""')}"`;
-      return `${nama},${nis},${j},${n.nilai},${n.tanggal ? new Date(n.tanggal).toLocaleDateString('id-ID') : '-'},${d}`;
-    }).join('\n');
-
-    const csv = header + rows;
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `nilai-${currentTugas?.kelas?.nama || 'kelas'}-${currentTugas?.mapel?.nama || 'mapel'}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
@@ -229,22 +156,10 @@ const NilaiScreen = () => {
         )}
       </div>
 
-      <div className="flex gap-2" style={{ marginTop: '1rem' }}>
+      <div className="flex gap-2" style={{ marginTop: '1rem', paddingBottom: '4rem' }}>
         <button onClick={handleSave} disabled={isSaving} className="btn btn-primary flex-1" style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)' }}>
           <Save size={18} /> {isSaving ? 'Menyimpan...' : 'Simpan Nilai'}
         </button>
-      </div>
-
-      <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem', marginBottom: '4rem' }}>
-        <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.75rem' }}>Ekspor Nilai</h3>
-        <div className="flex gap-2">
-          <button onClick={exportPDF} className="btn btn-secondary flex-1" style={{ padding: '0.75rem' }}>
-            <FileText size={18} /> PDF
-          </button>
-          <button onClick={exportCSV} className="btn btn-secondary flex-1" style={{ padding: '0.75rem' }}>
-            <Download size={18} /> CSV
-          </button>
-        </div>
       </div>
     </div>
   );
