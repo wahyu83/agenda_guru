@@ -332,7 +332,7 @@ export const useAppStore = create((set, get) => ({
   fetchRiwayatGuru: async (guruId) => {
     const res = await fetch(`${API_BASE}/guru/riwayat/${guruId}`);
     const data = await res.json();
-    set({ riwayatGuru: data });
+    set((state) => ({ riwayatGuru: { ...state.riwayatGuru, agenda: data.agenda, absensi: data.absensi } }));
   },
 
   updateAgenda: async (id, data) => {

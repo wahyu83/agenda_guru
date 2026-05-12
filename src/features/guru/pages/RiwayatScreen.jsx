@@ -439,13 +439,13 @@ const RiwayatScreen = () => {
         )}
 
         {activeTab === 'nilai' && (
-          riwayatGuru.nilai.length === 0 ? (
+          (riwayatGuru.nilai || []).length === 0 ? (
             <div className="card" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
               <BarChart3 size={32} style={{ margin: '0 auto 0.5rem', opacity: 0.3 }} />
               Belum ada riwayat nilai.
             </div>
           ) : (
-            riwayatGuru.nilai.map((item) => (
+            (riwayatGuru.nilai || []).map((item) => (
               <div key={item.id} className="card" style={{ padding: '0.75rem' }}>
                 <div className="flex justify-between items-start">
                   <div style={{ flex: 1, minWidth: 0 }}>
