@@ -51,14 +51,16 @@ model Siswa {
   nama       String
   absensi    AbsensiSiswa[]
   enrollment Enrollment[]
+  nilai      Nilai[]
 }
 
 model Enrollment {
-  id      Int   @id @default(autoincrement())
+  id      Int     @id @default(autoincrement())
   siswaId Int
   kelasId Int
-  kelas   Kelas @relation(fields: [kelasId], references: [id], onDelete: Cascade)
-  siswa   Siswa @relation(fields: [siswaId], references: [id], onDelete: Cascade)
+  kelas   Kelas   @relation(fields: [kelasId], references: [id], onDelete: Cascade)
+  siswa   Siswa   @relation(fields: [siswaId], references: [id], onDelete: Cascade)
+  nilai   Nilai[]
 
   @@unique([siswaId, kelasId])
 }
