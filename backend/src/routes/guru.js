@@ -359,4 +359,60 @@ router.delete('/nilai/:id', async (req, res) => {
   }
 });
 
+router.get('/nilai-session/:pengampuId', async (req, res) => {
+  try {
+    const { tanggal, jenis, deskripsi } = req.query;
+    const nilai = await prisma.nilai.findMany({
+      where: {
+        pengampuId: parseInt(req.params.pengampuId),
+        tanggal: new Date(tanggal),
+        jenis: jenis || 'tugas',
+        deskripsi: deskripsi || ''
+      },
+      include: {
+        siswa: { select: { id: true, nama: true, nis: true } },
+        pengampu: { include: { kelas: { select: { id: true, nama: true } }, mapel: { select: { id: true, nama: true } } } }
+      },
+      orderBy: { createdAt: 'asc' }
+    });
+    res.json(nilai);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal mengambil session nilai' });
+  }
+});
+
+router.put('/nilai/batch', async (req, res) => {
+  try {
+    const { pengampuId, dataNilai } = req.body;
+    // Delete existing nilai for this session, then re-create
+    const first = dataNilai[0];
+    await prisma.nilai.deleteMany({
+      where: {
+        pengampuId: parseInt(pengampuId),
+        tanggal: new Date(first.tanggal),
+        jenis: first.jenis || 'tugas',
+        deskripsi: first.deskripsi || ''
+      }
+    });
+
+    const payloads = dataNilai.map(d => ({
+      pengampuId: parseInt(pengampuId),
+      siswaId: parseInt(d.siswaId),
+      enrollmentId: parseInt(d.enrollmentId),
+      tanggal: new Date(d.tanggal),
+      jenis: d.jenis || 'tugas',
+      nilai: parseFloat(d.nilai),
+      deskripsi: d.deskripsi || '',
+      last_modified: new Date()
+    }));
+
+    await prisma.nilai.createMany({ data: payloads });
+    res.json({ success: true, count: payloads.length });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal batch update nilai' });
+  }
+});
+
 module.exports = router;

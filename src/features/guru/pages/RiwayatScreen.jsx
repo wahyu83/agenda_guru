@@ -15,10 +15,6 @@ const RiwayatScreen = () => {
   const [showEditAgenda, setShowEditAgenda] = useState(false);
   const [editAgendaData, setEditAgendaData] = useState({ id: null, materi: '', deskripsi: '', catatan: '' });
 
-  // Modal Edit Nilai State
-  const [showEditNilai, setShowEditNilai] = useState(false);
-  const [editNilaiData, setEditNilaiData] = useState({ id: null, jenis: 'tugas', nilai: '', deskripsi: '' });
-
   useEffect(() => {
     if (user?.id) {
       fetchRiwayatGuru(user.id);
@@ -337,20 +333,42 @@ const RiwayatScreen = () => {
     }
   };
 
-  const handleEditNilaiSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await updateNilai(editNilaiData.id, { jenis: editNilaiData.jenis, nilai: parseFloat(editNilaiData.nilai), deskripsi: editNilaiData.deskripsi });
-      setShowEditNilai(false);
-      fetchRiwayatNilai(user.id);
-      alert('Nilai berhasil diupdate!');
-    } catch (error) { alert('Gagal update nilai'); }
+  const handleDeleteNilaiSession = async (session) => {
+    if (window.confirm(`Hapus semua nilai untuk sesi "${session.deskripsi || session.jenisLabel}"?`)) {
+      try {
+        for (const n of session.items) {
+          await deleteNilai(n.id);
+        }
+        fetchRiwayatNilai(user.id);
+      } catch (err) { alert('Gagal menghapus sesi nilai'); }
+    }
   };
 
-  const handleDeleteNilai = async (id) => {
-    if (window.confirm('Apakah Anda yakin ingin menghapus nilai ini?')) {
-      try { await deleteNilai(id); fetchRiwayatNilai(user.id); } catch (err) { alert('Gagal menghapus nilai'); }
-    }
+  // Group nilai into sessions
+  const getNilaiSessions = () => {
+    const nilai = riwayatGuru.nilai || [];
+    const groups = new Map();
+    nilai.forEach(n => {
+      const key = `${n.pengampuId}-${n.tanggal}-${n.jenis}-${n.deskripsi || ''}`;
+      if (!groups.has(key)) {
+        groups.set(key, {
+          pengampuId: n.pengampuId,
+          kelasId: n.pengampu?.kelas?.id,
+          kelas: n.pengampu?.kelas?.nama,
+          mapel: n.pengampu?.mapel?.nama,
+          tanggal: n.tanggal,
+          jenis: n.jenis,
+          jenisLabel: n.jenis === 'ulangan' ? 'Ulangan Harian' : 'Tugas',
+          deskripsi: n.deskripsi || '',
+          items: [],
+          siswaCount: new Set()
+        });
+      }
+      const ses = groups.get(key);
+      ses.items.push(n);
+      ses.siswaCount.add(n.siswaId);
+    });
+    return Array.from(groups.values()).sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
   };
 
   const activeExport = activeTab === 'agenda' ? exportAgenda : activeTab === 'absensi' ? exportAbsensi : exportNilai;
@@ -445,32 +463,33 @@ const RiwayatScreen = () => {
               Belum ada riwayat nilai.
             </div>
           ) : (
-            (riwayatGuru.nilai || []).map((item) => (
-              <div key={item.id} className="card" style={{ padding: '0.75rem' }}>
+            getNilaiSessions().map((session, idx) => (
+              <div key={idx} className="card" style={{ padding: '1rem', cursor: 'pointer' }}
+                onClick={() => navigate(`/guru/nilai-edit?pengampuId=${session.pengampuId}&tanggal=${session.tanggal}&jenis=${session.jenis}&deskripsi=${encodeURIComponent(session.deskripsi)}&kelasId=${session.kelasId}`)}>
                 <div className="flex justify-between items-start">
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <h3 style={{ fontWeight: '600', fontSize: '0.875rem', color: 'var(--primary)' }}>
-                      {item.pengampu?.kelas?.nama} - {item.pengampu?.mapel?.nama}
+                      {session.kelas} - {session.mapel}
                     </h3>
                     <div className="flex items-center gap-3" style={{ marginTop: '0.25rem' }}>
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <Clock size={12} /> {formatDate(item.tanggal)}
+                        <Clock size={12} /> {formatDate(session.tanggal)}
                       </span>
-                      <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.5rem', borderRadius: 'var(--radius-full)', backgroundColor: item.jenis === 'ulangan' ? 'var(--warning)20' : 'var(--info)20', color: item.jenis === 'ulangan' ? 'var(--warning)' : 'var(--info)', fontWeight: '600' }}>
-                        {item.jenis === 'ulangan' ? 'Ulangan Harian' : 'Tugas'}
+                      <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.5rem', borderRadius: 'var(--radius-full)', backgroundColor: session.jenis === 'ulangan' ? 'var(--warning)20' : 'var(--info)20', color: session.jenis === 'ulangan' ? 'var(--warning)' : 'var(--info)', fontWeight: '600' }}>
+                        {session.jenisLabel}
                       </span>
-                      {item.deskripsi && (
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{item.deskripsi}</span>
+                      {session.deskripsi && (
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{session.deskripsi}</span>
                       )}
                     </div>
-                    <p style={{ fontSize: '0.8rem', marginTop: '0.25rem', color: 'var(--text-muted)' }}>
-                      {item.siswa?.nama} ({item.siswa?.nis}) — <strong style={{ color: 'var(--primary)', fontSize: '1rem' }}>{item.nilai}</strong>
+                    <p style={{ fontSize: '0.75rem', marginTop: '0.25rem', color: 'var(--text-muted)' }}>
+                      {session.siswaCount.size} siswa telah dinilai
                     </p>
                   </div>
-                  <div className="flex gap-2" style={{ flexShrink: 0, marginLeft: '0.5rem' }}>
-                    <button onClick={() => { setEditNilaiData({ id: item.id, jenis: item.jenis, nilai: item.nilai, deskripsi: item.deskripsi || '' }); setShowEditNilai(true); }}
+                  <div className="flex gap-2" style={{ flexShrink: 0, marginLeft: '0.5rem' }} onClick={(e) => e.stopPropagation()}>
+                    <button onClick={() => navigate(`/guru/nilai-edit?pengampuId=${session.pengampuId}&tanggal=${session.tanggal}&jenis=${session.jenis}&deskripsi=${encodeURIComponent(session.deskripsi)}&kelasId=${session.kelasId}`)}
                       className="text-info hover:text-primary transition-colors bg-transparent border-none cursor-pointer"><Edit size={16} /></button>
-                    <button onClick={() => handleDeleteNilai(item.id)}
+                    <button onClick={() => handleDeleteNilaiSession(session)}
                       className="text-danger hover:opacity-80 transition-colors bg-transparent border-none cursor-pointer"><Trash2 size={16} /></button>
                   </div>
                 </div>
@@ -508,43 +527,6 @@ const RiwayatScreen = () => {
               </div>
               <div className="flex justify-end gap-3" style={{ marginTop: '1rem' }}>
                 <button type="button" onClick={() => setShowEditAgenda(false)} className="btn btn-secondary">Batal</button>
-                <button type="submit" className="btn btn-primary">Simpan Perubahan</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Edit Nilai */}
-      {showEditNilai && (
-        <div className="modal-backdrop">
-          <div className="modal-content animate-fade-in" style={{ width: '100%', maxWidth: '400px' }}>
-            <div className="flex justify-between items-center" style={{ marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>Edit Nilai</h2>
-              <button onClick={() => setShowEditNilai(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-                <X size={24} color="var(--text-muted)" />
-              </button>
-            </div>
-            <form onSubmit={handleEditNilaiSubmit} className="flex flex-col gap-4">
-              <div>
-                <label className="label">Jenis</label>
-                <select className="input" value={editNilaiData.jenis} onChange={(e) => setEditNilaiData({...editNilaiData, jenis: e.target.value})}>
-                  <option value="tugas">Tugas</option>
-                  <option value="ulangan">Ulangan Harian</option>
-                </select>
-              </div>
-              <div>
-                <label className="label">Nilai</label>
-                <input type="number" min="0" max="100" className="input" value={editNilaiData.nilai}
-                  onChange={(e) => setEditNilaiData({...editNilaiData, nilai: e.target.value})} required />
-              </div>
-              <div>
-                <label className="label">Deskripsi</label>
-                <input type="text" className="input" value={editNilaiData.deskripsi}
-                  onChange={(e) => setEditNilaiData({...editNilaiData, deskripsi: e.target.value})} />
-              </div>
-              <div className="flex justify-end gap-3" style={{ marginTop: '1rem' }}>
-                <button type="button" onClick={() => setShowEditNilai(false)} className="btn btn-secondary">Batal</button>
                 <button type="submit" className="btn btn-primary">Simpan Perubahan</button>
               </div>
             </form>

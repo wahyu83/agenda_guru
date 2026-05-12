@@ -481,6 +481,23 @@ export const useAppStore = create((set, get) => ({
     }
   },
 
+  fetchNilaiSession: async (pengampuId, tanggal, jenis, deskripsi) => {
+    const params = new URLSearchParams({ tanggal, jenis, deskripsi: deskripsi || '' });
+    const res = await fetch(`${API_BASE}/guru/nilai-session/${pengampuId}?${params}`);
+    if (!res.ok) throw new Error('Gagal mengambil session nilai');
+    return await res.json();
+  },
+
+  updateNilaiBatch: async (pengampuId, dataNilai) => {
+    const res = await fetch(`${API_BASE}/guru/nilai/batch`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pengampuId, dataNilai })
+    });
+    if (!res.ok) throw new Error('Gagal batch update nilai');
+    return await res.json();
+  },
+
   fetchNilaiExport: async (kelasId, mapelId = null) => {
     try {
       let url = `${API_BASE}/guru/nilai-export/${kelasId}?format=json`;
