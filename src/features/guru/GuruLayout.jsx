@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Calendar, Clock, User, UserCog, WifiOff, FileText } from 'lucide-react';
+import { Home, Calendar, Clock, User, UserCog, WifiOff, FileText, BookOpen } from 'lucide-react';
 import { useAppStore } from '../../lib/store';
 import ProfileModal from '../../components/ProfileModal';
 
@@ -65,6 +65,14 @@ const GuruLayout = () => {
           <span>Tugas</span>
         </NavLink>
         
+        <NavLink 
+          to="/guru/jadwal" 
+          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+        >
+          <BookOpen size={24} />
+          <span>Jadwal</span>
+        </NavLink>
+
         <NavLink 
           to="/guru/riwayat" 
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}

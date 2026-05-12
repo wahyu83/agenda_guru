@@ -14,6 +14,7 @@ export const useAppStore = create((set, get) => ({
   siswa: [],
   pengampuAktif: [], // Menyimpan pengampu untuk kelas yang sedang dilihat
   tugasGuru: [], // Jadwal mengajar untuk guru yang login
+  jadwalGuru: [], // Jadwal mengajar dengan status agenda hari ini
   siswaKelasAktif: [], // Daftar siswa untuk kelas yang dipilih guru
   riwayatGuru: { agenda: [], absensi: [] },
   laporanAgenda: [],
@@ -303,6 +304,12 @@ export const useAppStore = create((set, get) => ({
     const res = await fetch(`${API_BASE}/guru/tugas/${guruId}`);
     const data = await res.json();
     set({ tugasGuru: data });
+  },
+
+  fetchJadwalGuru: async (guruId) => {
+    const res = await fetch(`${API_BASE}/guru/jadwal/${guruId}`);
+    const data = await res.json();
+    set({ jadwalGuru: data });
   },
 
   fetchRiwayatGuru: async (guruId) => {

@@ -11,6 +11,49 @@ router.get('/tugas/:guruId', async (req, res) => {
   res.json(tugas);
 });
 
+// Mengambil jadwal mengajar dengan status agenda hari ini
+router.get('/jadwal/:guruId', async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const tugas = await prisma.$queryRaw`
+      SELECT p.*, 
+        json_build_object('id', k.id, 'nama', k.nama, 'tahunPelajaranId', k."tahunPelajaranId", 'waliKelasId', k."waliKelasId") as kelas,
+        json_build_object('id', m.id, 'nama', m.nama) as mapel,
+        CASE 
+          WHEN a.id IS NOT NULL THEN json_build_object('id', a.id, 'materi', a.materi, 'deskripsi', a.deskripsi, 'tanggal', a.tanggal)
+          ELSE NULL
+        END as "agendaHariIni"
+      FROM "Pengampu" p
+      JOIN "Kelas" k ON k.id = p."kelasId"
+      JOIN "MataPelajaran" m ON m.id = p."mapelId"
+      LEFT JOIN "Agenda" a ON a."pengampuId" = p.id 
+        AND a.tanggal >= ${today}::date 
+        AND a.tanggal < ${tomorrow}::date
+      WHERE p."guruId" = ${parseInt(req.params.guruId)}
+      ORDER BY 
+        CASE p.hari
+          WHEN 'Senin' THEN 1
+          WHEN 'Selasa' THEN 2
+          WHEN 'Rabu' THEN 3
+          WHEN 'Kamis' THEN 4
+          WHEN 'Jumat' THEN 5
+          WHEN 'Sabtu' THEN 6
+          ELSE 7
+        END,
+        p."jamKe" ASC
+    `;
+
+    res.json(tugas);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal mengambil jadwal' });
+  }
+});
+
 // Endpoint menyimpan agenda tunggal (Online)
 router.post('/agenda', async (req, res) => {
   const { pengampuId, tanggal, materi, deskripsi, catatan } = req.body;

@@ -68,6 +68,9 @@ model Pengampu {
   guruId  Int
   mapelId Int
   kelasId Int
+  hari    String        @default("Senin")
+  jamKe   Int           @default(1)
+  jamSampai Int         @default(1)
   absensi Absensi[]
   agenda  Agenda[]
   guru    User          @relation(fields: [guruId], references: [id], onDelete: Cascade)

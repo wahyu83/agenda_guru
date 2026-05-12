@@ -264,13 +264,16 @@ router.get('/pengampu/kelas/:id', async (req, res) => {
 });
 
 router.post('/pengampu', async (req, res) => {
-  const { guruId, mapelId, kelasId } = req.body;
+  const { guruId, mapelId, kelasId, hari, jamKe, jamSampai } = req.body;
   try {
     const data = await prisma.pengampu.create({
       data: {
         guruId: parseInt(guruId),
         mapelId: parseInt(mapelId),
-        kelasId: parseInt(kelasId)
+        kelasId: parseInt(kelasId),
+        hari: hari || 'Senin',
+        jamKe: parseInt(jamKe) || 1,
+        jamSampai: parseInt(jamSampai) || parseInt(jamKe) || 1
       },
       include: { guru: true, mapel: true }
     });

@@ -11,7 +11,10 @@ const KelasScreen = () => {
   // Pengampu Modal State
   const [showPengampuModal, setShowPengampuModal] = useState(false);
   const [selectedKelas, setSelectedKelas] = useState(null);
-  const [pengampuForm, setPengampuForm] = useState({ guruId: '', mapelId: '' });
+  const [pengampuForm, setPengampuForm] = useState({ guruId: '', mapelId: '', hari: 'Senin', jamKe: '1', jamSampai: '1' });
+
+  const HARI = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
+  const JAM_KE = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
 
   const tahunAktif = tahunPelajaran.find(t => t.isActive);
 
@@ -32,10 +35,13 @@ const KelasScreen = () => {
       const success = await addPengampu({
         guruId: pengampuForm.guruId,
         mapelId: pengampuForm.mapelId,
-        kelasId: selectedKelas.id
+        kelasId: selectedKelas.id,
+        hari: pengampuForm.hari,
+        jamKe: pengampuForm.jamKe,
+        jamSampai: pengampuForm.jamSampai
       });
       if (success) {
-        setPengampuForm({ guruId: '', mapelId: '' });
+        setPengampuForm({ guruId: '', mapelId: '', hari: 'Senin', jamKe: '1', jamSampai: '1' });
       }
     }
   };
@@ -187,7 +193,7 @@ const KelasScreen = () => {
               <p style={{ color: 'var(--danger)' }}>Peringatan: Tidak ada Tahun Pelajaran yang Aktif!</p>
             ) : (
               <>
-                <form onSubmit={handleAddPengampu} className="grid grid-cols-1 md:grid-cols-5 gap-2 mb-6 items-end">
+                <form onSubmit={handleAddPengampu} className="grid grid-cols-1 md:grid-cols-8 gap-2 mb-6 items-end">
                   <div className="md:col-span-2">
                     <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.875rem' }}>Mata Pelajaran</label>
                     <select className="input" value={pengampuForm.mapelId} onChange={e => setPengampuForm({...pengampuForm, mapelId: e.target.value})} required>
@@ -202,7 +208,25 @@ const KelasScreen = () => {
                       {guru.map(g => <option key={g.id} value={g.id}>{g.nama}</option>)}
                     </select>
                   </div>
-                  <div className="md:col-span-1">
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.875rem' }}>Hari</label>
+                    <select className="input" value={pengampuForm.hari} onChange={e => setPengampuForm({...pengampuForm, hari: e.target.value})} required>
+                      {HARI.map(h => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.875rem' }}>Jam Ke</label>
+                    <select className="input" value={pengampuForm.jamKe} onChange={e => setPengampuForm({...pengampuForm, jamKe: e.target.value, jamSampai: Math.max(parseInt(e.target.value), parseInt(pengampuForm.jamSampai)).toString()})} required>
+                      {JAM_KE.map(j => <option key={j} value={j}>{j}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.875rem' }}>Sampai</label>
+                    <select className="input" value={pengampuForm.jamSampai} onChange={e => setPengampuForm({...pengampuForm, jamSampai: e.target.value})} required>
+                      {JAM_KE.filter(j => parseInt(j) >= parseInt(pengampuForm.jamKe)).map(j => <option key={j} value={j}>{j}</option>)}
+                    </select>
+                  </div>
+                  <div>
                     <button type="submit" className="btn btn-primary w-full" style={{ padding: '0.6rem' }}><Plus size={18} /> Tambah</button>
                   </div>
                 </form>
@@ -213,6 +237,8 @@ const KelasScreen = () => {
                     <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--surface-hover)' }}>
                       <th style={{ padding: '0.75rem' }}>Mata Pelajaran</th>
                       <th style={{ padding: '0.75rem' }}>Guru</th>
+                      <th style={{ padding: '0.75rem' }}>Hari</th>
+                      <th style={{ padding: '0.75rem' }}>Jam</th>
                       <th style={{ padding: '0.75rem', textAlign: 'right' }}>Aksi</th>
                     </tr>
                   </thead>
@@ -224,6 +250,8 @@ const KelasScreen = () => {
                         <tr key={item.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                           <td style={{ padding: '0.75rem', fontWeight: '500' }}>{item.mapel?.nama}</td>
                           <td style={{ padding: '0.75rem' }}>{item.guru?.nama}</td>
+                          <td style={{ padding: '0.75rem' }}>{item.hari}</td>
+                          <td style={{ padding: '0.75rem' }}>{item.jamKe === item.jamSampai ? item.jamKe : `${item.jamKe}-${item.jamSampai}`}</td>
                           <td style={{ padding: '0.75rem', textAlign: 'right' }}>
                             <button 
                               onClick={() => { if(window.confirm('Hapus pengampu ini?')) deletePengampu(item.id) }}
