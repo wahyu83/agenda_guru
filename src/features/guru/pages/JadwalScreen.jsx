@@ -109,7 +109,7 @@ const JadwalScreen = () => {
                       const isConsumed = rowspans[cellKey];
 
                       if (isConsumed) {
-                        return <td key={hari} />;
+                        return null;
                       }
 
                       const items = scheduleMap[cellKey] || [];
@@ -125,10 +125,13 @@ const JadwalScreen = () => {
                           rowSpan={item._rowspan}
                           style={{
                             verticalAlign: 'middle',
-                            padding: 0,
+                            padding: '2px',
                             background: item.agendaHariIni
                               ? 'var(--secondary-light)'
                               : 'var(--primary-light)',
+                            outline: item.agendaHariIni
+                              ? '2px solid var(--secondary)'
+                              : '2px solid var(--primary)',
                           }}
                         >
                           <div
