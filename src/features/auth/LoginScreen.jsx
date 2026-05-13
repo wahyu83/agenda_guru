@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, User } from 'lucide-react';
 import { useAppStore, API_BASE } from '../../lib/store';
+import arahanImg from '../../../arahan.jpg';
 
 
 const LoginScreen = () => {
@@ -65,9 +65,7 @@ const LoginScreen = () => {
     }}>
       <div className="glass card animate-fade-in" style={{ width: '100%', maxWidth: '400px', padding: '2rem' }}>
         <div className="flex flex-col items-center justify-center gap-2" style={{ marginBottom: '2rem' }}>
-          <div style={{ padding: '1rem', backgroundColor: 'var(--primary)', borderRadius: 'var(--radius-full)', color: 'white' }}>
-            <BookOpen size={32} />
-          </div>
+          <img src={arahanImg} alt="SMKN 1 Arahan" style={{ width: '80px', height: '80px', borderRadius: 'var(--radius-md)', objectFit: 'cover' }} />
           <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', textAlign: 'center', lineHeight: '1.2' }}>
             Agenda Guru <br />
             <span style={{ fontSize: '1rem', fontWeight: '500', color: 'var(--primary)' }}>SMKN 1 Arahan</span>
