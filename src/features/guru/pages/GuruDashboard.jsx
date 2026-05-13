@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Book, ChevronRight, CheckCircle } from 'lucide-react';
 import { useAppStore } from '../../../lib/store';
@@ -6,6 +6,12 @@ import { useAppStore } from '../../../lib/store';
 const GuruDashboard = () => {
   const navigate = useNavigate();
   const { user, tugasGuru, fetchTugasGuru } = useAppStore();
+
+  const sortedTugas = useMemo(() => {
+    return [...tugasGuru].sort((a, b) =>
+      (a.kelas?.nama || '').localeCompare(b.kelas?.nama || '', 'id')
+    );
+  }, [tugasGuru]);
   
   useEffect(() => {
     if (user?.id) {
@@ -21,12 +27,12 @@ const GuruDashboard = () => {
       </div>
 
       <div className="flex flex-col gap-3">
-        {tugasGuru.length === 0 ? (
+        {sortedTugas.length === 0 ? (
           <div className="card" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
             Belum ada jadwal mengajar yang ditugaskan kepada Anda.
           </div>
         ) : (
-          tugasGuru.map((tugas) => (
+          sortedTugas.map((tugas) => (
             <div 
               key={tugas.id}
               className="card" 
