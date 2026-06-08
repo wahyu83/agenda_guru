@@ -145,3 +145,42 @@ Berhubung aplikasi ini sudah didukung teknologi PWA, para guru dapat membuka dom
 > sudo apt install certbot python3-certbot-nginx -y
 > sudo certbot --nginx -d domain_anda.com
 > ```
+
+---
+
+## 7. Update Aplikasi di VPS
+
+Setelah ada pembaruan kode di GitHub, ikuti langkah berikut untuk update aplikasi di VPS:
+
+### Update Backend
+```bash
+cd /var/www/agenda-guru
+
+# Tarik kode terbaru dari GitHub
+git pull origin master
+
+# Update backend
+cd backend
+npm install
+npx prisma generate
+npx prisma db push
+
+# Restart backend
+pm2 restart agenda-backend
+```
+
+### Update Frontend
+```bash
+cd /var/www/agenda-guru
+
+# Install dependensi frontend (jika ada perubahan package.json)
+npm install
+
+# Build ulang frontend
+npm run build
+```
+
+### Ringkasan Cepat (Copy-Paste)
+```bash
+cd /var/www/agenda-guru && git pull origin master && cd backend && npm install && npx prisma generate && npx prisma db push && pm2 restart agenda-backend && cd .. && npm install && npm run build
+```
