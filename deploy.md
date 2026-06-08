@@ -49,7 +49,7 @@ Pindahkan kode Anda dari GitHub ke VPS (misalnya di folder `/var/www/agenda-guru
 
 ```bash
 cd /var/www
-git clone https://github.com/Tarilusiana/agenda-guru_antigravity.git agenda-guru
+git clone https://github.com/wahyu83/agenda_guru.git agenda-guru
 cd agenda-guru/backend
 ```
 
