@@ -7,10 +7,25 @@ const GuruDashboard = () => {
   const navigate = useNavigate();
   const { user, tugasGuru, fetchTugasGuru } = useAppStore();
 
-  const sortedTugas = useMemo(() => {
-    return [...tugasGuru].sort((a, b) =>
+  const groupedTugas = useMemo(() => {
+    const map = new Map();
+    [...tugasGuru].sort((a, b) =>
       (a.kelas?.nama || '').localeCompare(b.kelas?.nama || '', 'id')
-    );
+    ).forEach((t) => {
+      const key = `${t.kelasId}-${t.mapelId}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          kelasId: t.kelasId,
+          mapelId: t.mapelId,
+          kelas: t.kelas,
+          mapel: t.mapel,
+          hariList: [],
+          firstPengampuId: t.id,
+        });
+      }
+      map.get(key).hariList.push(t.hari);
+    });
+    return Array.from(map.values());
   }, [tugasGuru]);
   
   useEffect(() => {
@@ -27,17 +42,17 @@ const GuruDashboard = () => {
       </div>
 
       <div className="flex flex-col gap-3">
-        {sortedTugas.length === 0 ? (
+        {groupedTugas.length === 0 ? (
           <div className="card" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
             Belum ada jadwal mengajar yang ditugaskan kepada Anda.
           </div>
         ) : (
-          sortedTugas.map((tugas) => (
+          groupedTugas.map((tugas) => (
             <div 
-              key={tugas.id}
+              key={`${tugas.kelasId}-${tugas.mapelId}`}
               className="card" 
               style={{ padding: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-              onClick={() => navigate(`/guru/agenda/${tugas.id}`)}
+              onClick={() => navigate(`/guru/agenda/${tugas.firstPengampuId}`)}
             >
               <div className="flex items-center gap-3">
                 <div style={{ padding: '0.75rem', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', borderRadius: 'var(--radius-md)' }}>
@@ -46,6 +61,13 @@ const GuruDashboard = () => {
                 <div>
                   <h3 style={{ fontWeight: '600', fontSize: '1rem' }}>{tugas.kelas?.nama}</h3>
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{tugas.mapel?.nama}</p>
+                  <div style={{ display: 'flex', gap: '0.25rem', marginTop: '0.25rem', flexWrap: 'wrap' }}>
+                    {tugas.hariList.map((hari) => (
+                      <span key={hari} style={{ fontSize: '0.6rem', padding: '0.1rem 0.4rem', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', borderRadius: 'var(--radius-full)', fontWeight: '500' }}>
+                        {hari}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
               
