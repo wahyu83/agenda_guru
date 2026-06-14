@@ -39,6 +39,8 @@ sudo -u postgres psql
 CREATE DATABASE agenda_guru;
 CREATE USER admin_agenda WITH ENCRYPTED PASSWORD 'password_rahasia';
 GRANT ALL PRIVILEGES ON DATABASE agenda_guru TO admin_agenda;
+\c agenda_guru
+GRANT ALL ON SCHEMA public TO admin_agenda;
 \q
 ```
 
