@@ -596,4 +596,47 @@ router.delete('/rencana-pertemuan/:id', async (req, res) => {
   }
 });
 
+// Salin rencana pertemuan ke kelas lain (satu mapel)
+router.post('/rencana-pertemuan/:id/copy', async (req, res) => {
+  try {
+    const { targetPengampuId } = req.body;
+    const sourceId = parseInt(req.params.id);
+
+    // Ambil data sumber
+    const source = await prisma.rencanaPertemuan.findUnique({
+      where: { id: sourceId },
+      include: { pengampu: true }
+    });
+    if (!source) return res.status(404).json({ error: 'Rencana tidak ditemukan' });
+
+    // Ambil data pengampu target
+    const target = await prisma.pengampu.findUnique({
+      where: { id: parseInt(targetPengampuId) }
+    });
+    if (!target) return res.status(404).json({ error: 'Kelas target tidak ditemukan' });
+
+    // Validasi: guru dan mapel harus sama
+    if (source.pengampu.guruId !== target.guruId) {
+      return res.status(403).json({ error: 'Hanya bisa menyalin ke kelas sendiri' });
+    }
+    if (source.pengampu.mapelId !== target.mapelId) {
+      return res.status(403).json({ error: 'Hanya bisa menyalin ke kelas dengan mapel yang sama' });
+    }
+
+    const copied = await prisma.rencanaPertemuan.create({
+      data: {
+        pengampuId: parseInt(targetPengampuId),
+        judul: source.judul,
+        langkahLangkah: source.langkahLangkah,
+        tanggal: source.tanggal
+      }
+    });
+
+    res.json({ success: true, data: copied });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal menyalin rencana pertemuan' });
+  }
+});
+
 module.exports = router;

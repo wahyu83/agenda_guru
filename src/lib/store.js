@@ -541,5 +541,18 @@ export const useAppStore = create((set, get) => ({
     const res = await fetch(`${API_BASE}/guru/rencana-pertemuan/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Gagal menghapus rencana pertemuan');
     return await res.json();
+  },
+
+  copyRencanaPertemuan: async (id, targetPengampuId) => {
+    const res = await fetch(`${API_BASE}/guru/rencana-pertemuan/${id}/copy`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetPengampuId })
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || 'Gagal menyalin rencana pertemuan');
+    }
+    return await res.json();
   }
 }));

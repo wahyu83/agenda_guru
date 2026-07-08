@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, X, Trash2, Edit3, Save, BookOpen } from 'lucide-react';
+import { ArrowLeft, Plus, X, Trash2, Edit3, Save, BookOpen, Copy, CheckSquare } from 'lucide-react';
 import { useAppStore } from '../../../lib/store';
 
 const RencanaScreen = () => {
   const { tugasId } = useParams();
   const navigate = useNavigate();
-  const { tugasGuru, fetchRencanaPertemuan, createRencanaPertemuan, updateRencanaPertemuan, deleteRencanaPertemuan } = useAppStore();
+  const { tugasGuru, fetchRencanaPertemuan, createRencanaPertemuan, updateRencanaPertemuan, deleteRencanaPertemuan, copyRencanaPertemuan } = useAppStore();
 
   const currentTugas = tugasGuru.find(t => t.id === parseInt(tugasId));
 
@@ -16,10 +16,24 @@ const RencanaScreen = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [editingId, setEditingId] = useState(null);
 
+  // Copy modal state
+  const [showCopyModal, setShowCopyModal] = useState(false);
+  const [copyItem, setCopyItem] = useState(null);
+  const [targetPengampuId, setTargetPengampuId] = useState('');
+  const [isCopying, setIsCopying] = useState(false);
+
   // Form state
   const [judul, setJudul] = useState('');
   const [tanggal, setTanggal] = useState('');
   const [langkahLangkah, setLangkahLangkah] = useState('');
+
+  // Daftar kelas lain dengan mapel yang sama
+  const kelasLain = useMemo(() => {
+    if (!currentTugas) return [];
+    return tugasGuru.filter(
+      t => t.mapelId === currentTugas.mapelId && t.id !== currentTugas.id
+    );
+  }, [tugasGuru, currentTugas]);
 
   useEffect(() => {
     if (tugasId) {
@@ -95,6 +109,35 @@ const RencanaScreen = () => {
       } catch (err) {
         alert('Gagal menghapus rencana pertemuan');
       }
+    }
+  };
+
+  const openCopyModal = (item) => {
+    if (kelasLain.length === 0) {
+      alert('Tidak ada kelas lain dengan mapel yang sama untuk disalin.');
+      return;
+    }
+    setCopyItem(item);
+    setTargetPengampuId(String(kelasLain[0].id));
+    setShowCopyModal(true);
+  };
+
+  const handleCopy = async () => {
+    if (!targetPengampuId) {
+      alert('Pilih kelas tujuan terlebih dahulu!');
+      return;
+    }
+    setIsCopying(true);
+    try {
+      await copyRencanaPertemuan(copyItem.id, parseInt(targetPengampuId));
+      alert(`Rencana "${copyItem.judul}" berhasil disalin ke kelas lain!`);
+      setShowCopyModal(false);
+      setCopyItem(null);
+      setTargetPengampuId('');
+    } catch (err) {
+      alert(err.message || 'Gagal menyalin rencana pertemuan');
+    } finally {
+      setIsCopying(false);
     }
   };
 
@@ -229,6 +272,13 @@ const RencanaScreen = () => {
                 </div>
                 <div className="flex gap-2" style={{ flexShrink: 0, marginLeft: '0.5rem' }}>
                   <button
+                    onClick={() => openCopyModal(item)}
+                    className="text-success hover:text-primary transition-colors bg-transparent border-none cursor-pointer"
+                    title="Salin ke kelas lain"
+                  >
+                    <Copy size={18} />
+                  </button>
+                  <button
                     onClick={() => handleEdit(item)}
                     className="text-info hover:text-primary transition-colors bg-transparent border-none cursor-pointer"
                     title="Edit"
@@ -254,6 +304,41 @@ const RencanaScreen = () => {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Copy Modal */}
+      {showCopyModal && (
+        <div className="modal-backdrop">
+          <div className="modal-content animate-fade-in" style={{ width: '100%', maxWidth: '400px' }}>
+            <div className="flex justify-between items-center" style={{ marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.125rem', fontWeight: 'bold' }}>Salin Rencana</h2>
+              <button onClick={() => setShowCopyModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                <X size={24} color="var(--text-muted)" />
+              </button>
+            </div>
+            <p style={{ fontSize: '0.875rem', marginBottom: '1rem' }}>
+              Salin <b>{copyItem?.judul}</b> ke kelas:
+            </p>
+            <select
+              className="input"
+              value={targetPengampuId}
+              onChange={(e) => setTargetPengampuId(e.target.value)}
+              style={{ marginBottom: '1rem' }}
+            >
+              {kelasLain.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.kelas?.nama} - {t.mapel?.nama}
+                </option>
+              ))}
+            </select>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setShowCopyModal(false)} className="btn btn-secondary">Batal</button>
+              <button onClick={handleCopy} className="btn btn-primary" disabled={isCopying}>
+                <CheckSquare size={16} /> {isCopying ? 'Menyalin...' : 'Salin'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
