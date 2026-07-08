@@ -95,7 +95,7 @@ const NilaiScreen = () => {
           Nilai
         </button>
         <button onClick={() => navigate(`/guru/rpp/${tugasId}`)} style={{ flex: '1 0 auto', padding: '0.75rem', border: 'none', background: 'none', color: 'var(--text-muted)', fontWeight: '500', whiteSpace: 'nowrap' }}>
-          RPP
+          Rencana
         </button>
       </div>
 

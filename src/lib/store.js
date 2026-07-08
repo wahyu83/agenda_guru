@@ -510,29 +510,36 @@ export const useAppStore = create((set, get) => ({
     }
   },
 
-  // --- RPP ---
-  fetchRpp: async (pengampuId) => {
-    const res = await fetch(`${API_BASE}/guru/rpp/${pengampuId}`);
-    if (!res.ok) throw new Error('Gagal mengambil RPP');
+  // --- RENCANA PERTEMUAN ---
+  fetchRencanaPertemuan: async (pengampuId) => {
+    const res = await fetch(`${API_BASE}/guru/rencana-pertemuan/${pengampuId}`);
+    if (!res.ok) throw new Error('Gagal mengambil rencana pertemuan');
     return await res.json();
   },
 
-  uploadRpp: async (data) => {
-    const res = await fetch(`${API_BASE}/guru/rpp`, {
+  createRencanaPertemuan: async (data) => {
+    const res = await fetch(`${API_BASE}/guru/rencana-pertemuan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.error || 'Gagal upload RPP');
-    }
+    if (!res.ok) throw new Error('Gagal menyimpan rencana pertemuan');
     return await res.json();
   },
 
-  deleteRpp: async (id) => {
-    const res = await fetch(`${API_BASE}/guru/rpp/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error('Gagal menghapus RPP');
+  updateRencanaPertemuan: async (id, data) => {
+    const res = await fetch(`${API_BASE}/guru/rencana-pertemuan/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Gagal update rencana pertemuan');
+    return await res.json();
+  },
+
+  deleteRencanaPertemuan: async (id) => {
+    const res = await fetch(`${API_BASE}/guru/rencana-pertemuan/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Gagal menghapus rencana pertemuan');
     return await res.json();
   }
 }));

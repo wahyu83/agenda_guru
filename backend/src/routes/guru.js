@@ -523,128 +523,76 @@ router.get('/laporan-kelas/:kelasId', async (req, res) => {
   }
 });
 
-// --- RPP ---
-function getBase64FileSize(base64String) {
-  if (!base64String) return 0;
-  const base64Part = base64String.includes(',') ? base64String.split(',')[1] : base64String;
-  if (!base64Part) return 0;
-  // Base64 length * 3/4 approximates original bytes (ignoring padding)
-  return Math.floor(base64Part.length * 3 / 4);
-}
-
-router.post('/rpp', async (req, res) => {
+// --- RENCANA PERTEMUAN ---
+router.post('/rencana-pertemuan', async (req, res) => {
   try {
-    const { pengampuId, judul, fileData, fileName, fileType, deskripsi } = req.body;
-
-    // Validasi hanya PDF
-    const isPdf = fileType?.includes('pdf') || fileName?.toLowerCase().endsWith('.pdf');
-    if (!isPdf) {
-      return res.status(400).json({ error: 'Hanya file PDF yang diperbolehkan.' });
-    }
-
-    // Get guruId from pengampu
-    const pengampu = await prisma.pengampu.findUnique({
-      where: { id: parseInt(pengampuId) },
-      select: { guruId: true }
-    });
-    if (!pengampu) {
-      return res.status(404).json({ error: 'Pengampu tidak ditemukan' });
-    }
-
-    // Find all pengampu for this guru
-    const allPengampu = await prisma.pengampu.findMany({
-      where: { guruId: pengampu.guruId },
-      select: { id: true }
-    });
-    const pengampuIds = allPengampu.map(p => p.id);
-
-    // Calculate total existing RPP size for this guru
-    const existingRpps = await prisma.rpp.findMany({
-      where: { pengampuId: { in: pengampuIds } },
-      select: { fileData: true }
-    });
-
-    let totalExistingBytes = 0;
-    for (const rpp of existingRpps) {
-      totalExistingBytes += getBase64FileSize(rpp.fileData);
-    }
-
-    const newFileBytes = getBase64FileSize(fileData);
-    const MAX_TOTAL_BYTES = 50 * 1024 * 1024; // 50MB
-
-    if (totalExistingBytes + newFileBytes > MAX_TOTAL_BYTES) {
-      const usedMB = (totalExistingBytes / (1024 * 1024)).toFixed(1);
-      return res.status(400).json({
-        error: `Storage RPP Anda sudah terpakai ${usedMB}MB dari batas 50MB. Hapus RPP lama untuk upload file baru.`
-      });
-    }
-
-    const rpp = await prisma.rpp.create({
+    const { pengampuId, judul, langkahLangkah, tanggal } = req.body;
+    const data = await prisma.rencanaPertemuan.create({
       data: {
         pengampuId: parseInt(pengampuId),
         judul,
-        fileData,
-        fileName,
-        fileType,
-        deskripsi: deskripsi || '',
-        tanggalUpload: new Date()
+        langkahLangkah: langkahLangkah || '',
+        tanggal: tanggal ? new Date(tanggal) : null
       }
     });
-    res.json(rpp);
+    res.json(data);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Gagal menyimpan RPP' });
+    res.status(500).json({ error: 'Gagal menyimpan rencana pertemuan' });
   }
 });
 
-router.get('/rpp/:pengampuId', async (req, res) => {
+router.get('/rencana-pertemuan/:pengampuId', async (req, res) => {
   try {
-    const rppList = await prisma.rpp.findMany({
+    const list = await prisma.rencanaPertemuan.findMany({
       where: { pengampuId: parseInt(req.params.pengampuId) },
-      orderBy: { tanggalUpload: 'desc' }
+      orderBy: { createdAt: 'desc' }
     });
-    res.json(rppList);
+    res.json(list);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Gagal mengambil RPP' });
+    res.status(500).json({ error: 'Gagal mengambil rencana pertemuan' });
   }
 });
 
-router.delete('/rpp/:id', async (req, res) => {
+router.get('/rencana-pertemuan-detail/:id', async (req, res) => {
   try {
-    await prisma.rpp.delete({ where: { id: parseInt(req.params.id) } });
+    const data = await prisma.rencanaPertemuan.findUnique({
+      where: { id: parseInt(req.params.id) }
+    });
+    if (!data) return res.status(404).json({ error: 'Data tidak ditemukan' });
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal mengambil detail' });
+  }
+});
+
+router.put('/rencana-pertemuan/:id', async (req, res) => {
+  try {
+    const { judul, langkahLangkah, tanggal } = req.body;
+    const data = await prisma.rencanaPertemuan.update({
+      where: { id: parseInt(req.params.id) },
+      data: {
+        judul,
+        langkahLangkah: langkahLangkah || '',
+        tanggal: tanggal ? new Date(tanggal) : null
+      }
+    });
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal update rencana pertemuan' });
+  }
+});
+
+router.delete('/rencana-pertemuan/:id', async (req, res) => {
+  try {
+    await prisma.rencanaPertemuan.delete({ where: { id: parseInt(req.params.id) } });
     res.json({ success: true });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Gagal menghapus RPP' });
-  }
-});
-
-// Endpoint untuk melihat file RPP langsung di browser (tanpa download)
-router.get('/rpp-file/:id', async (req, res) => {
-  try {
-    const rpp = await prisma.rpp.findUnique({
-      where: { id: parseInt(req.params.id) }
-    });
-    if (!rpp) {
-      return res.status(404).json({ error: 'RPP tidak ditemukan' });
-    }
-
-    // Extract base64 data (handle data:application/pdf;base64,xxx format)
-    let base64Data = rpp.fileData;
-    if (base64Data.includes(',')) {
-      base64Data = base64Data.split(',')[1];
-    }
-
-    const buffer = Buffer.from(base64Data, 'base64');
-    const contentType = rpp.fileType || 'application/octet-stream';
-
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Disposition', `inline; filename="${rpp.fileName}"`);
-    res.send(buffer);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Gagal mengambil file RPP' });
+    res.status(500).json({ error: 'Gagal menghapus rencana pertemuan' });
   }
 });
 

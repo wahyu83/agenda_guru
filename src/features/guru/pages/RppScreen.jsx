@@ -1,36 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Upload, FileText, Trash2, Eye, X, Plus } from 'lucide-react';
-import { useAppStore, API_BASE } from '../../../lib/store';
+import { ArrowLeft, Plus, X, Trash2, Edit3, Save, BookOpen } from 'lucide-react';
+import { useAppStore } from '../../../lib/store';
 
 const RppScreen = () => {
   const { tugasId } = useParams();
   const navigate = useNavigate();
-  const { tugasGuru, fetchRpp, uploadRpp, deleteRpp } = useAppStore();
+  const { tugasGuru, fetchRencanaPertemuan, createRencanaPertemuan, updateRencanaPertemuan, deleteRencanaPertemuan } = useAppStore();
 
   const currentTugas = tugasGuru.find(t => t.id === parseInt(tugasId));
 
-  const [rppList, setRppList] = useState([]);
+  const [list, setList] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [showUpload, setShowUpload] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
   // Form state
   const [judul, setJudul] = useState('');
-  const [deskripsi, setDeskripsi] = useState('');
-  const [file, setFile] = useState(null);
+  const [tanggal, setTanggal] = useState('');
+  const [langkahLangkah, setLangkahLangkah] = useState('');
 
   useEffect(() => {
     if (tugasId) {
-      loadRpp();
+      loadData();
     }
   }, [tugasId]);
 
-  const loadRpp = async () => {
+  const loadData = async () => {
     setIsLoading(true);
     try {
-      const data = await fetchRpp(parseInt(tugasId));
-      setRppList(data);
+      const data = await fetchRencanaPertemuan(parseInt(tugasId));
+      setList(data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -38,78 +39,67 @@ const RppScreen = () => {
     }
   };
 
-  const handleFileChange = (e) => {
-    const selected = e.target.files[0];
-    if (selected) {
-      if (selected.size > 50 * 1024 * 1024) {
-        alert('Ukuran file maksimal 50MB');
-        return;
-      }
-      if (!selected.type.includes('pdf') && !selected.name.toLowerCase().endsWith('.pdf')) {
-        alert('Hanya file PDF yang diperbolehkan.');
-        return;
-      }
-      setFile(selected);
-    }
+  const resetForm = () => {
+    setJudul('');
+    setTanggal('');
+    setLangkahLangkah('');
+    setEditingId(null);
+    setShowForm(false);
   };
 
-  const handleUpload = async (e) => {
+  const handleEdit = (item) => {
+    setEditingId(item.id);
+    setJudul(item.judul);
+    setTanggal(item.tanggal ? new Date(item.tanggal).toISOString().split('T')[0] : '');
+    setLangkahLangkah(item.langkahLangkah || '');
+    setShowForm(true);
+  };
+
+  const handleSave = async (e) => {
     e.preventDefault();
-    if (!judul || !file) {
-      alert('Judul dan file wajib diisi!');
+    if (!judul.trim()) {
+      alert('Judul pertemuan wajib diisi!');
       return;
     }
 
-    setIsUploading(true);
+    setIsSaving(true);
     try {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64 = reader.result;
-        try {
-          await uploadRpp({
-            pengampuId: parseInt(tugasId),
-            judul,
-            deskripsi,
-            fileData: base64,
-            fileName: file.name,
-            fileType: file.type
-          });
-          alert('RPP berhasil diupload!');
-          setShowUpload(false);
-          setJudul('');
-          setDeskripsi('');
-          setFile(null);
-          loadRpp();
-        } catch (err) {
-          alert(err.message || 'Gagal upload RPP');
-        } finally {
-          setIsUploading(false);
-        }
+      const payload = {
+        pengampuId: parseInt(tugasId),
+        judul: judul.trim(),
+        langkahLangkah: langkahLangkah.trim(),
+        tanggal: tanggal || null
       };
-      reader.readAsDataURL(file);
+
+      if (editingId) {
+        await updateRencanaPertemuan(editingId, payload);
+        alert('Rencana pertemuan berhasil diupdate!');
+      } else {
+        await createRencanaPertemuan(payload);
+        alert('Rencana pertemuan berhasil disimpan!');
+      }
+      resetForm();
+      loadData();
     } catch (err) {
-      console.error(err);
-      setIsUploading(false);
+      alert(err.message || 'Gagal menyimpan rencana pertemuan');
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Apakah Anda yakin ingin menghapus RPP ini?')) {
+    if (window.confirm('Apakah Anda yakin ingin menghapus rencana pertemuan ini?')) {
       try {
-        await deleteRpp(id);
-        loadRpp();
+        await deleteRencanaPertemuan(id);
+        loadData();
       } catch (err) {
-        alert('Gagal menghapus RPP');
+        alert('Gagal menghapus rencana pertemuan');
       }
     }
   };
 
-  const handleView = (rpp) => {
-    const fileUrl = `${API_BASE}/guru/rpp-file/${rpp.id}`;
-    window.open(fileUrl, '_blank');
-  };
-
   const formatDate = (dateString) => {
+    if (!dateString) return '-';
     const date = new Date(dateString);
     const d = String(date.getDate()).padStart(2, '0');
     const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -125,7 +115,7 @@ const RppScreen = () => {
           <ArrowLeft size={24} />
         </button>
         <div>
-          <h1 style={{ fontSize: '1.125rem', fontWeight: 'bold' }}>RPP</h1>
+          <h1 style={{ fontSize: '1.125rem', fontWeight: 'bold' }}>Rencana Pertemuan</h1>
           <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
             {currentTugas ? `${currentTugas.kelas?.nama} - ${currentTugas.mapel?.nama}` : 'Memuat data...'}
           </p>
@@ -155,124 +145,115 @@ const RppScreen = () => {
         <button
           style={{ flex: '1 0 auto', padding: '0.75rem', border: 'none', background: 'none', borderBottom: '2px solid var(--primary)', color: 'var(--primary)', fontWeight: '600', whiteSpace: 'nowrap' }}
         >
-          RPP
+          Rencana
         </button>
       </div>
 
-      {/* Upload Button */}
+      {/* Add Button */}
       <div className="flex justify-end">
         <button
-          onClick={() => setShowUpload(true)}
+          onClick={() => { resetForm(); setShowForm(true); }}
           className="btn btn-primary"
           style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
         >
-          <Plus size={16} /> Upload RPP
+          <Plus size={16} /> {showForm ? 'Tutup Form' : 'Tambah Rencana'}
         </button>
       </div>
 
-      {/* RPP List */}
+      {/* Form */}
+      {showForm && (
+        <div className="card" style={{ padding: '1rem' }}>
+          <form onSubmit={handleSave} className="flex flex-col gap-4">
+            <div>
+              <label className="label">Judul Pertemuan</label>
+              <input
+                type="text"
+                className="input"
+                placeholder="Contoh: Pertemuan 1 - Pendahuluan"
+                value={judul}
+                onChange={(e) => setJudul(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <label className="label">Tanggal Rencana (Opsional)</label>
+              <input
+                type="date"
+                className="input"
+                value={tanggal}
+                onChange={(e) => setTanggal(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="label">Langkah-langkah Pembelajaran</label>
+              <textarea
+                className="input"
+                rows="6"
+                placeholder="Tuliskan langkah-langkah pembelajaran secara rinci..."
+                value={langkahLangkah}
+                onChange={(e) => setLangkahLangkah(e.target.value)}
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <button type="button" onClick={resetForm} className="btn btn-secondary">Batal</button>
+              <button type="submit" className="btn btn-primary" disabled={isSaving}>
+                <Save size={16} /> {isSaving ? 'Menyimpan...' : (editingId ? 'Update' : 'Simpan')}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* List */}
       {isLoading ? (
-        <div className="card" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Memuat RPP...</div>
-      ) : rppList.length === 0 ? (
+        <div className="card" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Memuat data...</div>
+      ) : list.length === 0 ? (
         <div className="card" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-          <FileText size={40} style={{ margin: '0 auto 0.75rem', opacity: 0.3 }} />
-          <p>Belum ada RPP yang diupload.</p>
+          <BookOpen size={40} style={{ margin: '0 auto 0.75rem', opacity: 0.3 }} />
+          <p>Belum ada rencana pertemuan.</p>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {rppList.map((rpp) => (
-            <div key={rpp.id} className="card" style={{ padding: '1rem' }}>
-              <div className="flex justify-between items-start">
+          {list.map((item) => (
+            <div key={item.id} className="card" style={{ padding: '1rem' }}>
+              <div className="flex justify-between items-start" style={{ marginBottom: '0.5rem' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <h3 style={{ fontWeight: '600', fontSize: '0.95rem', color: 'var(--primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {rpp.judul}
+                  <h3 style={{ fontWeight: '600', fontSize: '0.95rem', color: 'var(--primary)' }}>
+                    {item.judul}
                   </h3>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                    {formatDate(rpp.tanggalUpload)} • {rpp.fileName}
-                  </p>
-                  {rpp.deskripsi && (
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                      {rpp.deskripsi}
+                  {item.tanggal && (
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                      Tanggal: {formatDate(item.tanggal)}
                     </p>
                   )}
                 </div>
                 <div className="flex gap-2" style={{ flexShrink: 0, marginLeft: '0.5rem' }}>
                   <button
-                    onClick={() => handleView(rpp)}
+                    onClick={() => handleEdit(item)}
                     className="text-info hover:text-primary transition-colors bg-transparent border-none cursor-pointer"
-                    title="Lihat RPP"
+                    title="Edit"
                   >
-                    <Eye size={18} />
+                    <Edit3 size={18} />
                   </button>
                   <button
-                    onClick={() => handleDelete(rpp.id)}
+                    onClick={() => handleDelete(item.id)}
                     className="text-danger hover:opacity-80 transition-colors bg-transparent border-none cursor-pointer"
-                    title="Hapus RPP"
+                    title="Hapus"
                   >
                     <Trash2 size={18} />
                   </button>
                 </div>
               </div>
+              {item.langkahLangkah && (
+                <div style={{ marginTop: '0.5rem', padding: '0.75rem', backgroundColor: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)' }}>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.25rem', fontWeight: '600' }}>Langkah-langkah:</p>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-color)', whiteSpace: 'pre-wrap' }}>
+                    {item.langkahLangkah}
+                  </p>
+                </div>
+              )}
             </div>
           ))}
-        </div>
-      )}
-
-      {/* Upload Modal */}
-      {showUpload && (
-        <div className="modal-backdrop">
-          <div className="modal-content animate-fade-in" style={{ width: '100%', maxWidth: '500px' }}>
-            <div className="flex justify-between items-center" style={{ marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>Upload RPP Baru</h2>
-              <button onClick={() => setShowUpload(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-                <X size={24} color="var(--text-muted)" />
-              </button>
-            </div>
-            <form onSubmit={handleUpload} className="flex flex-col gap-4">
-              <div>
-                <label className="label">Judul RPP</label>
-                <input
-                  type="text"
-                  className="input"
-                  placeholder="Contoh: RPP Matematika - Trigonometri"
-                  value={judul}
-                  onChange={(e) => setJudul(e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <label className="label">Deskripsi (Opsional)</label>
-                <textarea
-                  className="input"
-                  rows="2"
-                  placeholder="Deskripsi singkat RPP"
-                  value={deskripsi}
-                  onChange={(e) => setDeskripsi(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="label">File RPP (PDF, max 50MB)</label>
-                <input
-                  type="file"
-                  className="input"
-                  accept=".pdf,application/pdf"
-                  onChange={handleFileChange}
-                  required
-                />
-                {file && (
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                    Terpilih: {file.name} ({(file.size / 1024).toFixed(1)} KB)
-                  </p>
-                )}
-              </div>
-              <div className="flex justify-end gap-3" style={{ marginTop: '1rem' }}>
-                <button type="button" onClick={() => setShowUpload(false)} className="btn btn-secondary">Batal</button>
-                <button type="submit" className="btn btn-primary" disabled={isUploading}>
-                  <Upload size={16} /> {isUploading ? 'Mengupload...' : 'Upload RPP'}
-                </button>
-              </div>
-            </form>
-          </div>
         </div>
       )}
     </div>
