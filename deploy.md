@@ -182,6 +182,48 @@ npm install
 npm run build
 ```
 
+### Cek Status Deploy di VPS
+Jalankan perintah ini satu per satu di VPS untuk memastikan kode sudah terbaru:
+
+```bash
+cd /var/www/agenda-guru
+git log --oneline -3
+```
+
+Lihat apakah commit terbaru sudah muncul. Jika belum, lanjutkan ke langkah update di bawah.
+
+### Update Manual (Tanpa Copy-Paste Panjang)
+Ketik perintah ini satu per satu di terminal VPS Anda:
+
+**Langkah 1 — Tarik kode terbaru dari GitHub:**
+```bash
+cd /var/www/agenda-guru
+git pull origin master
+```
+
+**Langkah 2 — Update dan restart backend:**
+```bash
+cd backend
+npm install
+npx prisma generate
+npx prisma db push
+pm2 restart agenda-backend
+```
+
+**Langkah 3 — Update dan build ulang frontend:**
+```bash
+cd /var/www/agenda-guru
+npm install
+npm run build
+```
+
+**Langkah 4 — Verifikasi backend hidup:**
+```bash
+pm2 status
+```
+
+Setelah semua langkah selesai, buka aplikasi di browser untuk memastikan perubahan sudah aktif.
+
 ### Ringkasan Cepat (Copy-Paste)
 ```bash
 cd /var/www/agenda-guru && git pull origin master && cd backend && npm install && npx prisma generate && npx prisma db push && pm2 restart agenda-backend && cd .. && npm install && npm run build
