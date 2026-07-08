@@ -508,5 +508,28 @@ export const useAppStore = create((set, get) => ({
       console.error('Gagal export nilai:', err);
       return null;
     }
+  },
+
+  // --- RPP ---
+  fetchRpp: async (pengampuId) => {
+    const res = await fetch(`${API_BASE}/guru/rpp/${pengampuId}`);
+    if (!res.ok) throw new Error('Gagal mengambil RPP');
+    return await res.json();
+  },
+
+  uploadRpp: async (data) => {
+    const res = await fetch(`${API_BASE}/guru/rpp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Gagal upload RPP');
+    return await res.json();
+  },
+
+  deleteRpp: async (id) => {
+    const res = await fetch(`${API_BASE}/guru/rpp/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Gagal menghapus RPP');
+    return await res.json();
   }
 }));

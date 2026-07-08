@@ -76,6 +76,12 @@ const AgendaScreen = () => {
         >
           Nilai
         </button>
+        <button 
+          onClick={() => navigate(`/guru/rpp/${tugasId}`)}
+          style={{ flex: 1, padding: '0.75rem', border: 'none', background: 'none', color: 'var(--text-muted)', fontWeight: '500' }}
+        >
+          RPP
+        </button>
       </div>
 
       <div className="card" style={{ padding: '1rem' }}>

@@ -94,6 +94,9 @@ const NilaiScreen = () => {
         <button style={{ flex: 1, padding: '0.75rem', border: 'none', background: 'none', borderBottom: '2px solid var(--primary)', color: 'var(--primary)', fontWeight: '600' }}>
           Nilai
         </button>
+        <button onClick={() => navigate(`/guru/rpp/${tugasId}`)} style={{ flex: 1, padding: '0.75rem', border: 'none', background: 'none', color: 'var(--text-muted)', fontWeight: '500' }}>
+          RPP
+        </button>
       </div>
 
       <div className="flex flex-col gap-3">

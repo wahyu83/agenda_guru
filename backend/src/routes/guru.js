@@ -89,14 +89,14 @@ router.post('/absensi', async (req, res) => {
         last_modified: new Date()
       }
     });
-    
+
     // Buat detail siswa
     const detailData = dataAbsensi.map(siswa => ({
       absensiId: absensi.id,
       siswaId: parseInt(siswa.id),
       status: siswa.status
     }));
-    
+
     await prisma.absensiSiswa.createMany({
       data: detailData
     });
@@ -105,6 +105,106 @@ router.post('/absensi', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Gagal menyimpan absensi' });
+  }
+});
+
+// Mengambil detail absensi berdasarkan ID
+router.get('/absensi-detail/:id', async (req, res) => {
+  try {
+    const absensi = await prisma.absensi.findUnique({
+      where: { id: parseInt(req.params.id) },
+      include: {
+        pengampu: { include: { kelas: true, mapel: true } },
+        siswaDetail: { include: { siswa: true } }
+      }
+    });
+    if (!absensi) {
+      return res.status(404).json({ error: 'Absensi tidak ditemukan' });
+    }
+    res.json(absensi);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal mengambil detail absensi' });
+  }
+});
+
+// Update absensi
+router.put('/absensi/:id', async (req, res) => {
+  try {
+    const { dataAbsensi } = req.body;
+    const absensiId = parseInt(req.params.id);
+
+    // Update last_modified pada header absensi
+    await prisma.absensi.update({
+      where: { id: absensiId },
+      data: { last_modified: new Date() }
+    });
+
+    // Update detail siswa: hapus yang lama, buat yang baru
+    await prisma.absensiSiswa.deleteMany({
+      where: { absensiId }
+    });
+
+    const detailData = dataAbsensi.map(siswa => ({
+      absensiId: absensiId,
+      siswaId: parseInt(siswa.siswaId || siswa.id),
+      status: siswa.status
+    }));
+
+    await prisma.absensiSiswa.createMany({
+      data: detailData
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal update absensi' });
+  }
+});
+
+// Hapus absensi
+router.delete('/absensi/:id', async (req, res) => {
+  try {
+    await prisma.absensi.delete({
+      where: { id: parseInt(req.params.id) }
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal menghapus absensi' });
+  }
+});
+
+// Update agenda
+router.put('/agenda/:id', async (req, res) => {
+  try {
+    const { materi, deskripsi, catatan } = req.body;
+    const agenda = await prisma.agenda.update({
+      where: { id: parseInt(req.params.id) },
+      data: {
+        materi,
+        deskripsi,
+        catatan: catatan || '',
+        last_modified: new Date()
+      }
+    });
+    res.json(agenda);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal update agenda' });
+  }
+});
+
+// Hapus agenda
+router.delete('/agenda/:id', async (req, res) => {
+  try {
+    await prisma.agenda.delete({
+      where: { id: parseInt(req.params.id) }
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal menghapus agenda' });
   }
 });
 
@@ -420,6 +520,51 @@ router.get('/laporan-kelas/:kelasId', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Gagal mengambil laporan kelas' });
+  }
+});
+
+// --- RPP ---
+router.post('/rpp', async (req, res) => {
+  try {
+    const { pengampuId, judul, fileData, fileName, fileType, deskripsi } = req.body;
+    const rpp = await prisma.rpp.create({
+      data: {
+        pengampuId: parseInt(pengampuId),
+        judul,
+        fileData,
+        fileName,
+        fileType,
+        deskripsi: deskripsi || '',
+        tanggalUpload: new Date()
+      }
+    });
+    res.json(rpp);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal menyimpan RPP' });
+  }
+});
+
+router.get('/rpp/:pengampuId', async (req, res) => {
+  try {
+    const rppList = await prisma.rpp.findMany({
+      where: { pengampuId: parseInt(req.params.pengampuId) },
+      orderBy: { tanggalUpload: 'desc' }
+    });
+    res.json(rppList);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal mengambil RPP' });
+  }
+});
+
+router.delete('/rpp/:id', async (req, res) => {
+  try {
+    await prisma.rpp.delete({ where: { id: parseInt(req.params.id) } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal menghapus RPP' });
   }
 });
 
