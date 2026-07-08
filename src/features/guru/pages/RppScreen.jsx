@@ -45,6 +45,10 @@ const RppScreen = () => {
         alert('Ukuran file maksimal 50MB');
         return;
       }
+      if (!selected.type.includes('pdf') && !selected.name.toLowerCase().endsWith('.pdf')) {
+        alert('Hanya file PDF yang diperbolehkan.');
+        return;
+      }
       setFile(selected);
     }
   };
@@ -247,11 +251,11 @@ const RppScreen = () => {
                 />
               </div>
               <div>
-                <label className="label">File RPP (PDF/Word/Excel, max 50MB)</label>
+                <label className="label">File RPP (PDF, max 50MB)</label>
                 <input
                   type="file"
                   className="input"
-                  accept=".pdf,.doc,.docx,.xls,.xlsx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  accept=".pdf,application/pdf"
                   onChange={handleFileChange}
                   required
                 />

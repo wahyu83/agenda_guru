@@ -536,6 +536,12 @@ router.post('/rpp', async (req, res) => {
   try {
     const { pengampuId, judul, fileData, fileName, fileType, deskripsi } = req.body;
 
+    // Validasi hanya PDF
+    const isPdf = fileType?.includes('pdf') || fileName?.toLowerCase().endsWith('.pdf');
+    if (!isPdf) {
+      return res.status(400).json({ error: 'Hanya file PDF yang diperbolehkan.' });
+    }
+
     // Get guruId from pengampu
     const pengampu = await prisma.pengampu.findUnique({
       where: { id: parseInt(pengampuId) },
