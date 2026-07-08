@@ -28,7 +28,7 @@ import WaliKelasScreen from './features/guru/pages/WaliKelasScreen';
 import JadwalScreen from './features/guru/pages/JadwalScreen';
 import NilaiScreen from './features/guru/pages/NilaiScreen';
 import NilaiEditScreen from './features/guru/pages/NilaiEditScreen';
-import RppScreen from './features/guru/pages/RppScreen';
+import RencanaScreen from './features/guru/pages/RencanaScreen';
 
 function App() {
   const fetchMasterData = useAppStore((state) => state.fetchMasterData);
@@ -67,7 +67,7 @@ function App() {
           <Route path="jadwal" element={<JadwalScreen />} />
           <Route path="nilai/:tugasId" element={<NilaiScreen />} />
           <Route path="nilai-edit" element={<NilaiEditScreen />} />
-          <Route path="rpp/:tugasId" element={<RppScreen />} />
+          <Route path="rencana/:tugasId" element={<RencanaScreen />} />
           <Route path="wali-kelas" element={<WaliKelasScreen />} />
         </Route>
 

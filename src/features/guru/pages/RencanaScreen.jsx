@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, X, Trash2, Edit3, Save, BookOpen } from 'lucide-react';
 import { useAppStore } from '../../../lib/store';
 
-const RppScreen = () => {
+const RencanaScreen = () => {
   const { tugasId } = useParams();
   const navigate = useNavigate();
   const { tugasGuru, fetchRencanaPertemuan, createRencanaPertemuan, updateRencanaPertemuan, deleteRencanaPertemuan } = useAppStore();
@@ -260,4 +260,4 @@ const RppScreen = () => {
   );
 };
 
-export default RppScreen;
+export default RencanaScreen;

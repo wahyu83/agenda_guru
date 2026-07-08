@@ -77,7 +77,7 @@ const AgendaScreen = () => {
           Nilai
         </button>
         <button
-          onClick={() => navigate(`/guru/rpp/${tugasId}`)}
+          onClick={() => navigate(`/guru/rencana/${tugasId}`)}
           style={{ flex: '1 0 auto', padding: '0.75rem', border: 'none', background: 'none', color: 'var(--text-muted)', fontWeight: '500', whiteSpace: 'nowrap' }}
         >
           Rencana

@@ -94,7 +94,7 @@ const NilaiScreen = () => {
         <button style={{ flex: '1 0 auto', padding: '0.75rem', border: 'none', background: 'none', borderBottom: '2px solid var(--primary)', color: 'var(--primary)', fontWeight: '600', whiteSpace: 'nowrap' }}>
           Nilai
         </button>
-        <button onClick={() => navigate(`/guru/rpp/${tugasId}`)} style={{ flex: '1 0 auto', padding: '0.75rem', border: 'none', background: 'none', color: 'var(--text-muted)', fontWeight: '500', whiteSpace: 'nowrap' }}>
+        <button onClick={() => navigate(`/guru/rencana/${tugasId}`)} style={{ flex: '1 0 auto', padding: '0.75rem', border: 'none', background: 'none', color: 'var(--text-muted)', fontWeight: '500', whiteSpace: 'nowrap' }}>
           Rencana
         </button>
       </div>
