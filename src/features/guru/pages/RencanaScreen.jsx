@@ -21,6 +21,7 @@ const RencanaScreen = () => {
   const [copyItem, setCopyItem] = useState(null);
   const [targetPengampuId, setTargetPengampuId] = useState('');
   const [isCopying, setIsCopying] = useState(false);
+  const [expandedId, setExpandedId] = useState(null);
 
   // Form state
   const [judul, setJudul] = useState('');
@@ -257,53 +258,68 @@ const RencanaScreen = () => {
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {list.map((item) => (
-            <div key={item.id} className="card" style={{ padding: '1rem' }}>
-              <div className="flex justify-between items-start" style={{ marginBottom: '0.5rem' }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <h3 style={{ fontWeight: '600', fontSize: '0.95rem', color: 'var(--primary)' }}>
-                    {item.judul}
-                  </h3>
-                  {item.tanggal && (
-                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                      Tanggal: {formatDate(item.tanggal)}
-                    </p>
-                  )}
+          {list.map((item) => {
+            const isExpanded = expandedId === item.id;
+            return (
+              <div key={item.id} className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                {/* Judul + Aksi (selalu terlihat) */}
+                <div
+                  onClick={() => setExpandedId(isExpanded ? null : item.id)}
+                  className="flex justify-between items-center"
+                  style={{ padding: '1rem', cursor: 'pointer', backgroundColor: isExpanded ? 'var(--bg-secondary)' : 'transparent' }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h3 style={{ fontWeight: '600', fontSize: '0.95rem', color: 'var(--primary)' }}>
+                      {item.judul}
+                    </h3>
+                    {item.tanggal && (
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                        {formatDate(item.tanggal)}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-2 items-center" style={{ flexShrink: 0, marginLeft: '0.5rem' }}>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                      {isExpanded ? 'Tutup' : 'Lihat'}
+                    </span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); openCopyModal(item); }}
+                      className="text-success hover:text-primary transition-colors bg-transparent border-none cursor-pointer"
+                      title="Salin ke kelas lain"
+                    >
+                      <Copy size={18} />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleEdit(item); }}
+                      className="text-info hover:text-primary transition-colors bg-transparent border-none cursor-pointer"
+                      title="Edit"
+                    >
+                      <Edit3 size={18} />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
+                      className="text-danger hover:opacity-80 transition-colors bg-transparent border-none cursor-pointer"
+                      title="Hapus"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-2" style={{ flexShrink: 0, marginLeft: '0.5rem' }}>
-                  <button
-                    onClick={() => openCopyModal(item)}
-                    className="text-success hover:text-primary transition-colors bg-transparent border-none cursor-pointer"
-                    title="Salin ke kelas lain"
-                  >
-                    <Copy size={18} />
-                  </button>
-                  <button
-                    onClick={() => handleEdit(item)}
-                    className="text-info hover:text-primary transition-colors bg-transparent border-none cursor-pointer"
-                    title="Edit"
-                  >
-                    <Edit3 size={18} />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(item.id)}
-                    className="text-danger hover:opacity-80 transition-colors bg-transparent border-none cursor-pointer"
-                    title="Hapus"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
+
+                {/* Detail (hanya muncul saat expanded) */}
+                {isExpanded && item.langkahLangkah && (
+                  <div style={{ padding: '0 1rem 1rem 1rem' }}>
+                    <div style={{ padding: '0.75rem', backgroundColor: 'var(--bg)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.25rem', fontWeight: '600' }}>Langkah-langkah Pembelajaran:</p>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-color)', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>
+                        {item.langkahLangkah}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
-              {item.langkahLangkah && (
-                <div style={{ marginTop: '0.5rem', padding: '0.75rem', backgroundColor: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)' }}>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.25rem', fontWeight: '600' }}>Langkah-langkah:</p>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-color)', whiteSpace: 'pre-wrap' }}>
-                    {item.langkahLangkah}
-                  </p>
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
