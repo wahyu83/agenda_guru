@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Upload, FileText, Trash2, Eye, X, Plus } from 'lucide-react';
-import { useAppStore } from '../../../lib/store';
+import { useAppStore, API_BASE } from '../../../lib/store';
 
 const RppScreen = () => {
   const { tugasId } = useParams();
@@ -101,17 +101,8 @@ const RppScreen = () => {
   };
 
   const handleView = (rpp) => {
-    const newWindow = window.open();
-    if (newWindow) {
-      newWindow.document.write(`
-        <html>
-          <head><title>${rpp.judul}</title></head>
-          <body style="margin:0">
-            <iframe src="${rpp.fileData}" style="width:100%;height:100vh;border:none;" />
-          </body>
-        </html>
-      `);
-    }
+    const fileUrl = `${API_BASE}/guru/rpp-file/${rpp.id}`;
+    window.open(fileUrl, '_blank');
   };
 
   const formatDate = (dateString) => {

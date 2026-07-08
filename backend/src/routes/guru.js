@@ -614,4 +614,32 @@ router.delete('/rpp/:id', async (req, res) => {
   }
 });
 
+// Endpoint untuk melihat file RPP langsung di browser (tanpa download)
+router.get('/rpp-file/:id', async (req, res) => {
+  try {
+    const rpp = await prisma.rpp.findUnique({
+      where: { id: parseInt(req.params.id) }
+    });
+    if (!rpp) {
+      return res.status(404).json({ error: 'RPP tidak ditemukan' });
+    }
+
+    // Extract base64 data (handle data:application/pdf;base64,xxx format)
+    let base64Data = rpp.fileData;
+    if (base64Data.includes(',')) {
+      base64Data = base64Data.split(',')[1];
+    }
+
+    const buffer = Buffer.from(base64Data, 'base64');
+    const contentType = rpp.fileType || 'application/octet-stream';
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `inline; filename="${rpp.fileName}"`);
+    res.send(buffer);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal mengambil file RPP' });
+  }
+});
+
 module.exports = router;
