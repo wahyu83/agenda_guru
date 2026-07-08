@@ -84,17 +84,17 @@ const NilaiScreen = () => {
         </div>
       </div>
 
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: '0.5rem' }}>
-        <button onClick={() => navigate(`/guru/agenda/${tugasId}`)} style={{ flex: 1, padding: '0.75rem', border: 'none', background: 'none', color: 'var(--text-muted)', fontWeight: '500' }}>
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: '0.5rem', overflowX: 'auto' }}>
+        <button onClick={() => navigate(`/guru/agenda/${tugasId}`)} style={{ flex: '1 0 auto', padding: '0.75rem', border: 'none', background: 'none', color: 'var(--text-muted)', fontWeight: '500', whiteSpace: 'nowrap' }}>
           Agenda
         </button>
-        <button onClick={() => navigate(`/guru/absensi/${tugasId}`)} style={{ flex: 1, padding: '0.75rem', border: 'none', background: 'none', color: 'var(--text-muted)', fontWeight: '500' }}>
+        <button onClick={() => navigate(`/guru/absensi/${tugasId}`)} style={{ flex: '1 0 auto', padding: '0.75rem', border: 'none', background: 'none', color: 'var(--text-muted)', fontWeight: '500', whiteSpace: 'nowrap' }}>
           Absensi
         </button>
-        <button style={{ flex: 1, padding: '0.75rem', border: 'none', background: 'none', borderBottom: '2px solid var(--primary)', color: 'var(--primary)', fontWeight: '600' }}>
+        <button style={{ flex: '1 0 auto', padding: '0.75rem', border: 'none', background: 'none', borderBottom: '2px solid var(--primary)', color: 'var(--primary)', fontWeight: '600', whiteSpace: 'nowrap' }}>
           Nilai
         </button>
-        <button onClick={() => navigate(`/guru/rpp/${tugasId}`)} style={{ flex: 1, padding: '0.75rem', border: 'none', background: 'none', color: 'var(--text-muted)', fontWeight: '500' }}>
+        <button onClick={() => navigate(`/guru/rpp/${tugasId}`)} style={{ flex: '1 0 auto', padding: '0.75rem', border: 'none', background: 'none', color: 'var(--text-muted)', fontWeight: '500', whiteSpace: 'nowrap' }}>
           RPP
         </button>
       </div>

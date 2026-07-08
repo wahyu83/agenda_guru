@@ -41,8 +41,8 @@ const RppScreen = () => {
   const handleFileChange = (e) => {
     const selected = e.target.files[0];
     if (selected) {
-      if (selected.size > 5 * 1024 * 1024) {
-        alert('Ukuran file maksimal 5MB');
+      if (selected.size > 50 * 1024 * 1024) {
+        alert('Ukuran file maksimal 50MB');
         return;
       }
       setFile(selected);
@@ -77,7 +77,7 @@ const RppScreen = () => {
           setFile(null);
           loadRpp();
         } catch (err) {
-          alert('Gagal upload RPP');
+          alert(err.message || 'Gagal upload RPP');
         } finally {
           setIsUploading(false);
         }
@@ -138,27 +138,27 @@ const RppScreen = () => {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: '0.5rem' }}>
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: '0.5rem', overflowX: 'auto' }}>
         <button
           onClick={() => navigate(`/guru/agenda/${tugasId}`)}
-          style={{ flex: 1, padding: '0.75rem', border: 'none', background: 'none', color: 'var(--text-muted)', fontWeight: '500' }}
+          style={{ flex: '1 0 auto', padding: '0.75rem', border: 'none', background: 'none', color: 'var(--text-muted)', fontWeight: '500', whiteSpace: 'nowrap' }}
         >
           Agenda
         </button>
         <button
           onClick={() => navigate(`/guru/absensi/${tugasId}`)}
-          style={{ flex: 1, padding: '0.75rem', border: 'none', background: 'none', color: 'var(--text-muted)', fontWeight: '500' }}
+          style={{ flex: '1 0 auto', padding: '0.75rem', border: 'none', background: 'none', color: 'var(--text-muted)', fontWeight: '500', whiteSpace: 'nowrap' }}
         >
           Absensi
         </button>
         <button
           onClick={() => navigate(`/guru/nilai/${tugasId}`)}
-          style={{ flex: 1, padding: '0.75rem', border: 'none', background: 'none', color: 'var(--text-muted)', fontWeight: '500' }}
+          style={{ flex: '1 0 auto', padding: '0.75rem', border: 'none', background: 'none', color: 'var(--text-muted)', fontWeight: '500', whiteSpace: 'nowrap' }}
         >
           Nilai
         </button>
         <button
-          style={{ flex: 1, padding: '0.75rem', border: 'none', background: 'none', borderBottom: '2px solid var(--primary)', color: 'var(--primary)', fontWeight: '600' }}
+          style={{ flex: '1 0 auto', padding: '0.75rem', border: 'none', background: 'none', borderBottom: '2px solid var(--primary)', color: 'var(--primary)', fontWeight: '600', whiteSpace: 'nowrap' }}
         >
           RPP
         </button>
@@ -256,7 +256,7 @@ const RppScreen = () => {
                 />
               </div>
               <div>
-                <label className="label">File RPP (PDF/Word/Excel, max 5MB)</label>
+                <label className="label">File RPP (PDF/Word/Excel, max 50MB)</label>
                 <input
                   type="file"
                   className="input"

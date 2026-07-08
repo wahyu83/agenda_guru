@@ -524,9 +524,55 @@ router.get('/laporan-kelas/:kelasId', async (req, res) => {
 });
 
 // --- RPP ---
+function getBase64FileSize(base64String) {
+  if (!base64String) return 0;
+  const base64Part = base64String.includes(',') ? base64String.split(',')[1] : base64String;
+  if (!base64Part) return 0;
+  // Base64 length * 3/4 approximates original bytes (ignoring padding)
+  return Math.floor(base64Part.length * 3 / 4);
+}
+
 router.post('/rpp', async (req, res) => {
   try {
     const { pengampuId, judul, fileData, fileName, fileType, deskripsi } = req.body;
+
+    // Get guruId from pengampu
+    const pengampu = await prisma.pengampu.findUnique({
+      where: { id: parseInt(pengampuId) },
+      select: { guruId: true }
+    });
+    if (!pengampu) {
+      return res.status(404).json({ error: 'Pengampu tidak ditemukan' });
+    }
+
+    // Find all pengampu for this guru
+    const allPengampu = await prisma.pengampu.findMany({
+      where: { guruId: pengampu.guruId },
+      select: { id: true }
+    });
+    const pengampuIds = allPengampu.map(p => p.id);
+
+    // Calculate total existing RPP size for this guru
+    const existingRpps = await prisma.rpp.findMany({
+      where: { pengampuId: { in: pengampuIds } },
+      select: { fileData: true }
+    });
+
+    let totalExistingBytes = 0;
+    for (const rpp of existingRpps) {
+      totalExistingBytes += getBase64FileSize(rpp.fileData);
+    }
+
+    const newFileBytes = getBase64FileSize(fileData);
+    const MAX_TOTAL_BYTES = 50 * 1024 * 1024; // 50MB
+
+    if (totalExistingBytes + newFileBytes > MAX_TOTAL_BYTES) {
+      const usedMB = (totalExistingBytes / (1024 * 1024)).toFixed(1);
+      return res.status(400).json({
+        error: `Storage RPP Anda sudah terpakai ${usedMB}MB dari batas 50MB. Hapus RPP lama untuk upload file baru.`
+      });
+    }
+
     const rpp = await prisma.rpp.create({
       data: {
         pengampuId: parseInt(pengampuId),

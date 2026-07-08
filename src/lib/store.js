@@ -523,7 +523,10 @@ export const useAppStore = create((set, get) => ({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
-    if (!res.ok) throw new Error('Gagal upload RPP');
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || 'Gagal upload RPP');
+    }
     return await res.json();
   },
 
