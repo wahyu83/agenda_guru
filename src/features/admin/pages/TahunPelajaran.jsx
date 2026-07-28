@@ -3,16 +3,34 @@ import { Plus, Edit2, Trash2, CheckCircle } from 'lucide-react';
 import { useAppStore } from '../../../lib/store';
 
 const TahunPelajaran = () => {
-  const { tahunPelajaran, setTahunAktif, addTahunPelajaran, deleteTahunPelajaran } = useAppStore();
+  const { tahunPelajaran, setTahunAktif, addTahunPelajaran, updateTahunPelajaran, deleteTahunPelajaran } = useAppStore();
   
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({ nama: '', semester: 'Ganjil' });
+
+  const handleEditClick = (item) => {
+    setEditingId(item.id);
+    setFormData({ nama: item.nama, semester: item.semester });
+    setShowForm(true);
+  };
+
+  const handleAddClick = () => {
+    setEditingId(null);
+    setFormData({ nama: '', semester: 'Ganjil' });
+    setShowForm(true);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (formData.nama) {
-      await addTahunPelajaran(formData.nama, formData.semester);
+      if (editingId) {
+        await updateTahunPelajaran(editingId, formData.nama, formData.semester);
+      } else {
+        await addTahunPelajaran(formData.nama, formData.semester);
+      }
       setShowForm(false);
+      setEditingId(null);
       setFormData({ nama: '', semester: 'Ganjil' });
     }
   };
@@ -24,14 +42,16 @@ const TahunPelajaran = () => {
           <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Tahun Pelajaran</h1>
           <p style={{ color: 'var(--text-muted)' }}>Kelola data tahun pelajaran dan atur tahun pelajaran aktif.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowForm(true)}>
+        <button className="btn btn-primary" onClick={handleAddClick}>
           <Plus size={18} /> Tambah Tahun Pelajaran
         </button>
       </div>
 
       {showForm && (
         <div className="card" style={{ padding: '1.5rem', marginBottom: '1rem', border: '1px solid var(--primary)' }}>
-          <h2 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '1rem' }}>Tambah Tahun Pelajaran</h2>
+          <h2 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '1rem' }}>
+            {editingId ? 'Edit Tahun Pelajaran' : 'Tambah Tahun Pelajaran'}
+          </h2>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
               <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>Tahun Pelajaran (misal: 2025/2026)</label>
@@ -55,8 +75,8 @@ const TahunPelajaran = () => {
               </select>
             </div>
             <div className="flex gap-2 justify-end mt-2">
-              <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>Batal</button>
-              <button type="submit" className="btn btn-primary">Simpan</button>
+              <button type="button" className="btn btn-secondary" onClick={() => { setShowForm(false); setEditingId(null); }}>Batal</button>
+              <button type="submit" className="btn btn-primary">{editingId ? 'Update' : 'Simpan'}</button>
             </div>
           </form>
         </div>
@@ -97,7 +117,7 @@ const TahunPelajaran = () => {
                         Jadikan Aktif
                       </button>
                     )}
-                    <button className="btn btn-secondary" style={{ padding: '0.5rem', color: 'var(--info)' }}>
+                    <button className="btn btn-secondary" style={{ padding: '0.5rem', color: 'var(--info)' }} onClick={() => handleEditClick(item)}>
                       <Edit2 size={16} />
                     </button>
                     <button 

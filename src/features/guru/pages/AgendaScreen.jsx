@@ -10,7 +10,11 @@ const AgendaScreen = () => {
   
   const currentTugas = tugasGuru.find(t => t.id === parseInt(tugasId));
 
-  const [tanggal, setTanggal] = useState(new Date().toISOString().split('T')[0]);
+  const today = new Date();
+  const maxDate = today.toISOString().split('T')[0];
+  const minDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  const [tanggal, setTanggal] = useState(maxDate);
   const [materi, setMateri] = useState('');
   const [deskripsi, setDeskripsi] = useState('');
   const [catatan, setCatatan] = useState('');
@@ -94,6 +98,8 @@ const AgendaScreen = () => {
               type="date" 
               className="input" 
               value={tanggal}
+              min={minDate}
+              max={maxDate}
               onChange={(e) => setTanggal(e.target.value)}
               required 
             />

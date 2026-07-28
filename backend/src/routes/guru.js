@@ -2,6 +2,18 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../db');
 
+const validateTanggal = (tanggal) => {
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+  const tgl = new Date(tanggal);
+  const minDate = new Date();
+  minDate.setDate(minDate.getDate() - 30);
+  minDate.setHours(0, 0, 0, 0);
+  if (tgl > today) return 'Tidak dapat mengisi untuk tanggal yang akan datang';
+  if (tgl < minDate) return 'Tidak dapat mengisi lebih dari 30 hari ke belakang';
+  return null;
+};
+
 // Mengambil jadwal tugas/pengampu untuk guru tertentu (dummy middleware guruId = 1 untuk sekarang jika tanpa JWT map)
 router.get('/tugas/:guruId', async (req, res) => {
   const tugas = await prisma.pengampu.findMany({
@@ -58,6 +70,9 @@ router.get('/jadwal/:guruId', async (req, res) => {
 router.post('/agenda', async (req, res) => {
   const { pengampuId, tanggal, materi, deskripsi, catatan } = req.body;
   try {
+    const errTgl = validateTanggal(tanggal);
+    if (errTgl) return res.status(400).json({ error: errTgl });
+
     const agenda = await prisma.agenda.create({
       data: {
         pengampuId: parseInt(pengampuId),
@@ -80,6 +95,9 @@ router.post('/agenda', async (req, res) => {
 router.post('/absensi', async (req, res) => {
   const { pengampuId, tanggal, dataAbsensi } = req.body;
   try {
+    const errTgl = validateTanggal(tanggal);
+    if (errTgl) return res.status(400).json({ error: errTgl });
+
     // Buat header absensi
     const absensi = await prisma.absensi.create({
       data: {
@@ -271,6 +289,11 @@ router.get('/riwayat/:guruId', async (req, res) => {
 router.post('/nilai', async (req, res) => {
   try {
     const { pengampuId, dataNilai } = req.body;
+
+    if (dataNilai && dataNilai.length > 0) {
+      const errTgl = validateTanggal(dataNilai[0].tanggal);
+      if (errTgl) return res.status(400).json({ error: errTgl });
+    }
 
     const payloads = dataNilai.map(d => ({
       pengampuId: parseInt(pengampuId),

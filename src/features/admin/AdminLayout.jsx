@@ -6,7 +6,7 @@ import ProfileModal from '../../components/ProfileModal';
 
 const AdminLayout = () => {
   const navigate = useNavigate();
-  const { user, setUser } = useAppStore();
+  const { user, setUser, fetchMasterData } = useAppStore();
   const [showProfile, setShowProfile] = useState(false);
 
   useEffect(() => {
@@ -14,6 +14,12 @@ const AdminLayout = () => {
       navigate('/login', { replace: true });
     }
   }, [user, navigate]);
+
+  useEffect(() => {
+    if (user && user.role === 'admin') {
+      fetchMasterData();
+    }
+  }, [user, fetchMasterData]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');

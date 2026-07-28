@@ -58,6 +58,18 @@ export const useAppStore = create((set, get) => ({
     const newData = await res.json();
     set((state) => ({ tahunPelajaran: [...state.tahunPelajaran, newData] }));
   },
+
+  updateTahunPelajaran: async (id, nama, semester) => {
+    const res = await fetch(`${API_BASE}/admin/tahun-pelajaran/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nama, semester })
+    });
+    const updated = await res.json();
+    set((state) => ({
+      tahunPelajaran: state.tahunPelajaran.map((item) => item.id === id ? updated : item)
+    }));
+  },
   
   deleteTahunPelajaran: async (id) => {
     await fetch(`${API_BASE}/admin/tahun-pelajaran/${id}`, { method: 'DELETE' });

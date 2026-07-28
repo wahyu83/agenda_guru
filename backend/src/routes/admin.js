@@ -14,6 +14,15 @@ router.post('/tahun-pelajaran', async (req, res) => {
   res.json(data);
 });
 
+router.put('/tahun-pelajaran/:id', async (req, res) => {
+  const { nama, semester } = req.body;
+  const data = await prisma.tahunPelajaran.update({
+    where: { id: parseInt(req.params.id) },
+    data: { nama, semester }
+  });
+  res.json(data);
+});
+
 router.delete('/tahun-pelajaran/:id', async (req, res) => {
   await prisma.tahunPelajaran.delete({ where: { id: parseInt(req.params.id) } });
   res.json({ success: true });

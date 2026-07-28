@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../../lib/store';
-import { Book, CheckCircle, Clock, Download, FileText, FileSpreadsheet, Edit, Trash2, X, BarChart3 } from 'lucide-react';
+import { Book, CheckCircle, Clock, Download, FileText, FileSpreadsheet, Edit, Trash2, X, BarChart3, Users } from 'lucide-react';
 import Papa from 'papaparse';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -21,6 +21,45 @@ const RiwayatScreen = () => {
       fetchRiwayatNilai(user.id);
     }
   }, [user, fetchRiwayatGuru, fetchRiwayatNilai]);
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    const d = String(date.getDate()).padStart(2, '0');
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const y = String(date.getFullYear()).slice(-2);
+    return `${d}/${m}/${y}`;
+  };
+
+  const rekapPerKelas = useMemo(() => {
+    const map = {};
+    riwayatGuru.absensi.forEach(session => {
+      const kelasId = session.pengampu?.kelas?.id;
+      const kelasNama = session.pengampu?.kelas?.nama || '-';
+      const mapelNama = session.pengampu?.mapel?.nama || '-';
+      const pId = session.pengampuId;
+      if (!map[kelasId]) {
+        map[kelasId] = { id: kelasId, nama: kelasNama, mapel: {} };
+      }
+      if (!map[kelasId].mapel[pId]) {
+        map[kelasId].mapel[pId] = { mapel: mapelNama, siswaMap: new Map() };
+      }
+      session.siswaDetail.forEach(d => {
+        const sid = d.siswaId;
+        if (!map[kelasId].mapel[pId].siswaMap.has(sid)) {
+          map[kelasId].mapel[pId].siswaMap.set(sid, { id: sid, nama: d.siswa.nama, nis: d.siswa.nis, H: 0, S: 0, I: 0, A: 0 });
+        }
+        const s = d.status?.charAt(0);
+        const siswa = map[kelasId].mapel[pId].siswaMap.get(sid);
+        if (s === 'H') siswa.H++;
+        else if (s === 'S') siswa.S++;
+        else if (s === 'I') siswa.I++;
+        else if (s === 'A') siswa.A++;
+      });
+    });
+    return Object.values(map).sort((a, b) => a.nama.localeCompare(b.nama));
+  }, [riwayatGuru.absensi]);
+
+  const [selectedKelasRecap, setSelectedKelasRecap] = useState(null);
 
   // --- CSV EXPORT LOGIC ---
   const handleExportCSV = (filename, data) => {
@@ -78,14 +117,6 @@ const RiwayatScreen = () => {
       console.error("Export PDF Error:", error);
       alert("Terjadi kesalahan saat membuat PDF.");
     }
-  };
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    const d = String(date.getDate()).padStart(2, '0');
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const y = String(date.getFullYear()).slice(-2);
-    return `${d}/${m}/${y}`;
   };
 
   const exportAgenda = (type) => {
@@ -432,27 +463,110 @@ const RiwayatScreen = () => {
           riwayatGuru.absensi.length === 0 ? (
             <div className="card" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Belum ada riwayat absensi.</div>
           ) : (
-            riwayatGuru.absensi.map((item) => (
-              <div key={item.id} className="card" style={{ padding: '1rem' }}>
-                <div className="flex justify-between items-start" style={{ marginBottom: '0.5rem' }}>
-                  <div>
-                    <h3 style={{ fontWeight: '600', fontSize: '1rem', color: 'var(--primary)' }}>{item.pengampu?.kelas?.nama} - {item.pengampu?.mapel?.nama}</h3>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <Clock size={12} /> {formatDate(item.tanggal)}
-                    </span>
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => navigate(`/guru/absensi-edit/${item.id}`)}
-                      className="text-info hover:text-primary transition-colors bg-transparent border-none cursor-pointer"><Edit size={18} /></button>
-                    <button onClick={() => handleDeleteAbsensi(item.id)}
-                      className="text-danger hover:opacity-80 transition-colors bg-transparent border-none cursor-pointer"><Trash2 size={18} /></button>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 text-success mt-2">
-                  <CheckCircle size={16} /> <span style={{ fontSize: '0.875rem', fontWeight: '500' }}>Absensi telah diisi</span>
-                </div>
+            <div>
+              {/* Kelas Selector */}
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.875rem', fontWeight: '500' }}>Pilih Kelas untuk Rekap</label>
+                <select
+                  className="input"
+                  value={selectedKelasRecap || ''}
+                  onChange={e => setSelectedKelasRecap(e.target.value ? parseInt(e.target.value) : null)}
+                >
+                  <option value="">-- Pilih Kelas --</option>
+                  {rekapPerKelas.map(k => (
+                    <option key={k.id} value={k.id}>{k.nama}</option>
+                  ))}
+                </select>
               </div>
-            ))
+
+              {/* Recap Table */}
+              {selectedKelasRecap && (() => {
+                const kelas = rekapPerKelas.find(k => k.id === selectedKelasRecap);
+                if (!kelas) return null;
+                return (
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    {Object.entries(kelas.mapel).map(([pId, mp]) => {
+                      const siswaList = Array.from(mp.siswaMap.values())
+                        .sort((a, b) => String(a.nis).localeCompare(String(b.nis), undefined, { numeric: true }));
+                      const totalH = siswaList.reduce((sum, s) => sum + s.H, 0);
+                      const totalS = siswaList.reduce((sum, s) => sum + s.S, 0);
+                      const totalI = siswaList.reduce((sum, s) => sum + s.I, 0);
+                      const totalA = siswaList.reduce((sum, s) => sum + s.A, 0);
+                      return (
+                        <div key={pId} className="card" style={{ overflow: 'hidden', marginBottom: '1rem' }}>
+                          <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--surface-hover)' }}>
+                            <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <Users size={16} /> {kelas.nama} — {mp.mapel}
+                            </h3>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.7rem', marginTop: '0.25rem' }}>H=Hadir, S=Sakit, I=Izin, A=Alpa</p>
+                          </div>
+                          <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
+                              <thead>
+                                <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--surface-hover)' }}>
+                                  <th style={{ padding: '0.5rem 0.75rem', color: 'var(--text-muted)', fontWeight: '600', textAlign: 'center' }}>No</th>
+                                  <th style={{ padding: '0.5rem 0.75rem', color: 'var(--text-muted)', fontWeight: '600' }}>Nama Siswa</th>
+                                  <th style={{ padding: '0.5rem', color: 'var(--secondary-hover)', fontWeight: '600', textAlign: 'center' }}>Hadir</th>
+                                  <th style={{ padding: '0.5rem', color: 'var(--warning)', fontWeight: '600', textAlign: 'center' }}>Sakit</th>
+                                  <th style={{ padding: '0.5rem', color: 'var(--info)', fontWeight: '600', textAlign: 'center' }}>Izin</th>
+                                  <th style={{ padding: '0.5rem', color: 'var(--danger)', fontWeight: '600', textAlign: 'center' }}>Alpa</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {siswaList.map((siswa, idx) => (
+                                  <tr key={siswa.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                                    <td style={{ padding: '0.5rem 0.75rem', textAlign: 'center', color: 'var(--text-muted)' }}>{idx + 1}</td>
+                                    <td style={{ padding: '0.5rem 0.75rem', fontWeight: '500' }}>{siswa.nama}</td>
+                                    <td style={{ padding: '0.5rem', textAlign: 'center', fontWeight: '600', color: 'var(--secondary-hover)' }}>{siswa.H}</td>
+                                    <td style={{ padding: '0.5rem', textAlign: 'center', fontWeight: '600', color: 'var(--warning)' }}>{siswa.S}</td>
+                                    <td style={{ padding: '0.5rem', textAlign: 'center', fontWeight: '600', color: 'var(--info)' }}>{siswa.I}</td>
+                                    <td style={{ padding: '0.5rem', textAlign: 'center', fontWeight: '600', color: 'var(--danger)' }}>{siswa.A}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                              <tfoot>
+                                <tr style={{ borderTop: '2px solid var(--border-color)', backgroundColor: 'var(--surface-hover)', fontWeight: 'bold' }}>
+                                  <td style={{ padding: '0.5rem 0.75rem' }} colSpan={2}>TOTAL</td>
+                                  <td style={{ padding: '0.5rem', textAlign: 'center', color: 'var(--secondary-hover)' }}>{totalH}</td>
+                                  <td style={{ padding: '0.5rem', textAlign: 'center', color: 'var(--warning)' }}>{totalS}</td>
+                                  <td style={{ padding: '0.5rem', textAlign: 'center', color: 'var(--info)' }}>{totalI}</td>
+                                  <td style={{ padding: '0.5rem', textAlign: 'center', color: 'var(--danger)' }}>{totalA}</td>
+                                </tr>
+                              </tfoot>
+                            </table>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+
+              <hr style={{ border: 'none', borderTop: '1px solid var(--border-color)', margin: '1rem 0' }} />
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Riwayat Absensi Harian</p>
+
+              {riwayatGuru.absensi.map((item) => (
+                <div key={item.id} className="card" style={{ padding: '1rem' }}>
+                  <div className="flex justify-between items-start" style={{ marginBottom: '0.5rem' }}>
+                    <div>
+                      <h3 style={{ fontWeight: '600', fontSize: '1rem', color: 'var(--primary)' }}>{item.pengampu?.kelas?.nama} - {item.pengampu?.mapel?.nama}</h3>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <Clock size={12} /> {formatDate(item.tanggal)}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => navigate(`/guru/absensi-edit/${item.id}`)}
+                        className="text-info hover:text-primary transition-colors bg-transparent border-none cursor-pointer"><Edit size={18} /></button>
+                      <button onClick={() => handleDeleteAbsensi(item.id)}
+                        className="text-danger hover:opacity-80 transition-colors bg-transparent border-none cursor-pointer"><Trash2 size={18} /></button>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-success mt-2">
+                    <CheckCircle size={16} /> <span style={{ fontSize: '0.875rem', fontWeight: '500' }}>Absensi telah diisi</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           )
         )}
 
