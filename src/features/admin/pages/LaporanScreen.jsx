@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download, FileText, FileSpreadsheet, Users } from 'lucide-react';
+import { Download, FileText, FileSpreadsheet } from 'lucide-react';
 import { useAppStore } from '../../../lib/store';
 import Papa from 'papaparse';
 import { jsPDF } from 'jspdf';
@@ -13,47 +13,6 @@ const LaporanScreen = () => {
     fetchLaporanAgenda();
     fetchLaporanAbsensi();
   }, [fetchLaporanAgenda, fetchLaporanAbsensi]);
-
-  // --- REKAP ABSENSI PER KELAS ---
-  const rekapAbsensiPerKelas = React.useMemo(() => {
-    const map = {};
-    laporanAbsensi.forEach(session => {
-      const kelasNama = session.pengampu?.kelas?.nama || '-';
-      const kelasId = session.pengampu?.kelas?.id;
-      if (!map[kelasId]) {
-        map[kelasId] = { kelas: kelasNama, H: 0, S: 0, I: 0, A: 0 };
-      }
-      session.siswaDetail.forEach(d => {
-        const s = d.status?.charAt(0);
-        if (s === 'H') map[kelasId].H++;
-        else if (s === 'S') map[kelasId].S++;
-        else if (s === 'I') map[kelasId].I++;
-        else if (s === 'A') map[kelasId].A++;
-      });
-    });
-    return Object.values(map).sort((a, b) => a.kelas.localeCompare(b.kelas));
-  }, [laporanAbsensi]);
-
-  const rekapAbsensiPerKelasDetail = React.useMemo(() => {
-    const map = {};
-    laporanAbsensi.forEach(session => {
-      const kelasNama = session.pengampu?.kelas?.nama || '-';
-      const kelasId = session.pengampu?.kelas?.id;
-      const mapelNama = session.pengampu?.mapel?.nama || '-';
-      const key = `${kelasId}_${session.pengampuId}`;
-      if (!map[key]) {
-        map[key] = { kelas: kelasNama, mapel: mapelNama, H: 0, S: 0, I: 0, A: 0 };
-      }
-      session.siswaDetail.forEach(d => {
-        const s = d.status?.charAt(0);
-        if (s === 'H') map[key].H++;
-        else if (s === 'S') map[key].S++;
-        else if (s === 'I') map[key].I++;
-        else if (s === 'A') map[key].A++;
-      });
-    });
-    return Object.values(map).sort((a, b) => a.kelas.localeCompare(b.kelas) || a.mapel.localeCompare(b.mapel));
-  }, [laporanAbsensi]);
 
   // --- CSV EXPORT LOGIC ---
   const handleExportCSV = (filename, data) => {
@@ -406,61 +365,6 @@ const LaporanScreen = () => {
       <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginTop: '1rem', borderBottom: '2px solid var(--border-color)', paddingBottom: '0.5rem' }}>
         Laporan Transaksional
       </h2>
-
-      {/* REKAP ABSENSI PER KELAS */}
-      {rekapAbsensiPerKelas.length > 0 && (
-        <div className="card" style={{ overflow: 'hidden' }}>
-          <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-color)' }}>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Users size={20} /> Rekap Absensi Per Kelas
-            </h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.25rem' }}>Total kehadiran siswa dirangkum per kelas (H=Hadir, S=Sakit, I=Izin, A=Alpa)</p>
-          </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--surface-hover)' }}>
-                  <th style={{ padding: '0.75rem 1.5rem', color: 'var(--text-muted)', fontWeight: '600' }}>Kelas</th>
-                  <th style={{ padding: '0.75rem', color: 'var(--text-muted)', fontWeight: '600', textAlign: 'center' }}>Mapel</th>
-                  <th style={{ padding: '0.75rem', color: 'var(--secondary-hover)', fontWeight: '600', textAlign: 'center' }}>Hadir</th>
-                  <th style={{ padding: '0.75rem', color: 'var(--warning)', fontWeight: '600', textAlign: 'center' }}>Sakit</th>
-                  <th style={{ padding: '0.75rem', color: 'var(--info)', fontWeight: '600', textAlign: 'center' }}>Izin</th>
-                  <th style={{ padding: '0.75rem', color: 'var(--danger)', fontWeight: '600', textAlign: 'center' }}>Alpa</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rekapAbsensiPerKelasDetail.map((row, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <td style={{ padding: '0.75rem 1.5rem', fontWeight: '500' }}>{row.kelas}</td>
-                    <td style={{ padding: '0.75rem', textAlign: 'center' }}>{row.mapel}</td>
-                    <td style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: 'var(--secondary-hover)' }}>{row.H}</td>
-                    <td style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: 'var(--warning)' }}>{row.S}</td>
-                    <td style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: 'var(--info)' }}>{row.I}</td>
-                    <td style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: 'var(--danger)' }}>{row.A}</td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr style={{ borderTop: '2px solid var(--border-color)', backgroundColor: 'var(--surface-hover)', fontWeight: 'bold' }}>
-                  <td style={{ padding: '0.75rem 1.5rem' }} colSpan={2}>TOTAL</td>
-                  <td style={{ padding: '0.75rem', textAlign: 'center', color: 'var(--secondary-hover)' }}>
-                    {rekapAbsensiPerKelas.reduce((s, r) => s + r.H, 0)}
-                  </td>
-                  <td style={{ padding: '0.75rem', textAlign: 'center', color: 'var(--warning)' }}>
-                    {rekapAbsensiPerKelas.reduce((s, r) => s + r.S, 0)}
-                  </td>
-                  <td style={{ padding: '0.75rem', textAlign: 'center', color: 'var(--info)' }}>
-                    {rekapAbsensiPerKelas.reduce((s, r) => s + r.I, 0)}
-                  </td>
-                  <td style={{ padding: '0.75rem', textAlign: 'center', color: 'var(--danger)' }}>
-                    {rekapAbsensiPerKelas.reduce((s, r) => s + r.A, 0)}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <ReportCard 
