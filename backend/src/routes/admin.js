@@ -246,8 +246,11 @@ router.post('/siswa/batch', async (req, res) => {
 router.post('/enroll', async (req, res) => {
   const { siswaId, kelasId } = req.body;
   try {
-    const data = await prisma.enrollment.create({
-      data: { siswaId: parseInt(siswaId), kelasId: parseInt(kelasId) }
+    const data = await prisma.$transaction(async (tx) => {
+      await tx.enrollment.deleteMany({ where: { siswaId: parseInt(siswaId) } });
+      return tx.enrollment.create({
+        data: { siswaId: parseInt(siswaId), kelasId: parseInt(kelasId) }
+      });
     });
     res.json(data);
   } catch (err) {
@@ -258,11 +261,13 @@ router.post('/enroll', async (req, res) => {
 router.post('/enroll/batch', async (req, res) => {
   const { siswaIds, kelasId } = req.body;
   try {
-    const payloads = siswaIds.map(id => ({
-      siswaId: parseInt(id),
-      kelasId: parseInt(kelasId)
-    }));
-    await prisma.enrollment.createMany({ data: payloads, skipDuplicates: true });
+    const ids = siswaIds.map(id => parseInt(id));
+    const targetKelasId = parseInt(kelasId);
+    await prisma.$transaction(async (tx) => {
+      await tx.enrollment.deleteMany({ where: { siswaId: { in: ids } } });
+      const payloads = ids.map(siswaId => ({ siswaId, kelasId: targetKelasId }));
+      await tx.enrollment.createMany({ data: payloads });
+    });
     res.json({ success: true, count: siswaIds.length });
   } catch (err) {
     res.status(400).json({ error: 'Gagal melakukan mutasi massal.' });
