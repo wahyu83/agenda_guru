@@ -147,8 +147,20 @@ router.post('/kelas', async (req, res) => {
   // Anggap kita ambil TP aktif pertama untuk contoh ini
   const tp = await prisma.tahunPelajaran.findFirst({ where: { isActive: true } });
   if (!tp) return res.status(400).json({ error: 'Tidak ada Tahun Pelajaran aktif' });
-  const data = await prisma.kelas.create({ data: { nama: req.body.nama, tahunPelajaranId: tp.id } });
-  res.json(data);
+  const created = await prisma.kelas.create({ data: { nama: req.body.nama, tahunPelajaranId: tp.id } });
+  const data = await prisma.kelas.findUnique({
+    where: { id: created.id },
+    include: { 
+      tahunPelajaran: true,
+      waliKelas: { select: { id: true, nama: true, nip: true } },
+      _count: { select: { enrollment: true, pengampu: true } }
+    }
+  });
+  res.json({
+    ...data,
+    jumlahSiswa: data._count.enrollment,
+    jumlahPengampu: data._count.pengampu
+  });
 });
 
 router.delete('/kelas/:id', async (req, res) => {
@@ -186,7 +198,11 @@ router.get('/siswa', async (req, res) => {
 });
 
 router.post('/siswa', async (req, res) => {
-  const data = await prisma.siswa.create({ data: { nama: req.body.nama, nis: req.body.nis } });
+  const created = await prisma.siswa.create({ data: { nama: req.body.nama, nis: req.body.nis } });
+  const data = await prisma.siswa.findUnique({
+    where: { id: created.id },
+    include: { enrollment: { include: { kelas: true } } }
+  });
   res.json(data);
 });
 
