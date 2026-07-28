@@ -200,7 +200,16 @@ export const useAppStore = create((set, get) => ({
   
   deleteSiswa: async (id) => {
     await fetch(`${API_BASE}/admin/siswa/${id}`, { method: 'DELETE' });
-    set((state) => ({ siswa: state.siswa.filter((item) => item.id !== id) }));
+    set((state) => {
+      const deletedSiswa = state.siswa.find((item) => item.id === id);
+      const kelasIds = deletedSiswa?.enrollment?.map(e => e.kelasId) || [];
+      return {
+        siswa: state.siswa.filter((item) => item.id !== id),
+        kelas: state.kelas.map(k =>
+          kelasIds.includes(k.id) ? { ...k, jumlahSiswa: Math.max(0, k.jumlahSiswa - 1) } : k
+        )
+      };
+    });
   },
 
   updateSiswa: async (id, data) => {
