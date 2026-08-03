@@ -1,14 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useAppStore } from '../../../lib/store';
-import { FileText, FileSpreadsheet, Users, BookOpen, GraduationCap } from 'lucide-react';
+import { FileText, FileSpreadsheet, Users, BookOpen, GraduationCap, Filter, X } from 'lucide-react';
 import Papa from 'papaparse';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+
+const MONTHS = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+];
 
 const WaliKelasScreen = () => {
   const { user, kelasWali, laporanKelas, fetchWaliKelas, fetchLaporanKelas } = useAppStore();
   const [selectedKelasId, setSelectedKelasId] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState('');
 
   useEffect(() => {
     if (user?.id) {
@@ -30,6 +36,31 @@ const WaliKelasScreen = () => {
   }, [selectedKelasId, fetchLaporanKelas]);
 
   const selectedKelas = kelasWali.find(k => k.id === selectedKelasId);
+
+  const availableMonths = useMemo(() => {
+    const months = new Set();
+    const allData = [...(laporanKelas.agenda || []), ...(laporanKelas.absensi || [])];
+    allData.forEach(item => {
+      if (item.tanggal) {
+        const d = new Date(item.tanggal);
+        months.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+      }
+    });
+    return Array.from(months).sort();
+  }, [laporanKelas]);
+
+  const formatMonthLabel = (key) => {
+    if (!key) return 'Semua Bulan';
+    const [y, m] = key.split('-');
+    return `${MONTHS[parseInt(m) - 1]} ${y}`;
+  };
+
+  const isInMonth = (dateString, monthKey) => {
+    if (!monthKey) return true;
+    const d = new Date(dateString);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    return key === monthKey;
+  };
 
   // --- UTILITY ---
   const formatDate = (dateString) => {
@@ -61,7 +92,13 @@ const WaliKelasScreen = () => {
       return;
     }
 
-    const formatted = laporanKelas.agenda.map(a => ({
+    const filtered = laporanKelas.agenda.filter(a => isInMonth(a.tanggal, selectedMonth));
+    if (filtered.length === 0) {
+      alert('Tidak ada data agenda untuk bulan yang dipilih.');
+      return;
+    }
+
+    const formatted = filtered.map(a => ({
       Tanggal: formatDate(a.tanggal),
       Guru: a.pengampu?.guru?.nama,
       Mapel: a.pengampu?.mapel?.nama,
@@ -77,8 +114,9 @@ const WaliKelasScreen = () => {
       { header: 'Deskripsi', key: 'Deskripsi' }
     ];
 
-    const title = `Jurnal Agenda Mengajar - ${selectedKelas?.nama || ''}`;
-    const filename = `Agenda_Kelas_${selectedKelas?.nama || 'unknown'}`;
+    const bulanLabel = selectedMonth ? ` ${formatMonthLabel(selectedMonth)}` : '';
+    const title = `Jurnal Agenda Mengajar - ${selectedKelas?.nama || ''}${bulanLabel}`;
+    const filename = `Agenda_Kelas_${selectedKelas?.nama || 'unknown'}${selectedMonth ? '_' + selectedMonth : ''}`;
 
     if (type === 'csv') {
       let csvRows = [];
@@ -130,9 +168,18 @@ const WaliKelasScreen = () => {
       return;
     }
 
+    const filtered = laporanKelas.absensi.filter(s => isInMonth(s.tanggal, selectedMonth));
+    if (filtered.length === 0) {
+      alert('Tidak ada data absensi untuk bulan yang dipilih.');
+      return;
+    }
+
+    const bulanLabel = selectedMonth ? ` ${formatMonthLabel(selectedMonth)}` : '';
+    const titleText = `Laporan Rekapitulasi Absensi Siswa${bulanLabel}`;
+
     // Group by pengampu (mapel)
     const groups = {};
-    laporanKelas.absensi.forEach(session => {
+    filtered.forEach(session => {
       const pId = session.pengampuId;
       if (!groups[pId]) {
         groups[pId] = { pengampu: session.pengampu, sessions: [], siswaMap: new Map() };
@@ -182,12 +229,12 @@ const WaliKelasScreen = () => {
       };
     });
 
-    const filename = `Absensi_Kelas_${selectedKelas?.nama || 'unknown'}`;
+    const filename = `Absensi_Kelas_${selectedKelas?.nama || 'unknown'}${selectedMonth ? '_' + selectedMonth : ''}`;
 
     if (type === 'csv') {
       let csvRows = [];
       matrices.forEach(m => {
-        csvRows.push(['Laporan Rekapitulasi Absensi Siswa']);
+        csvRows.push([titleText]);
         csvRows.push([`Kelas: ${m.kelas}    Mapel: ${m.mapel}    Guru: ${m.guru}`]);
         csvRows.push([`Wali Kelas: ${user?.nama || '-'}`]);
         csvRows.push(['Keterangan: H=Hadir, S=Sakit, I=Izin, A=Alpa']);
@@ -218,7 +265,7 @@ const WaliKelasScreen = () => {
           if (index > 0) doc.addPage();
 
           doc.setFontSize(14);
-          doc.text('Laporan Rekapitulasi Absensi Siswa', 14, 15);
+          doc.text(titleText, 14, 15);
           doc.setFontSize(10);
           doc.text(`Kelas: ${m.kelas}    Mapel: ${m.mapel}    Guru: ${m.guru}`, 14, 22);
           doc.text(`Wali Kelas: ${user?.nama || '-'}`, 14, 27);
@@ -245,6 +292,127 @@ const WaliKelasScreen = () => {
             columnStyles: {
               0: { halign: 'center', cellWidth: 10 },
               1: { halign: 'left', cellWidth: 45 }
+            }
+          });
+        });
+
+        doc.save(`${filename}.pdf`);
+      } catch (err) {
+        console.error(err);
+        alert('Gagal export PDF');
+      }
+    }
+  };
+
+  // --- EXPORT KEHADIRAN PER-SISWA ---
+  const exportKehadiranSiswa = (type) => {
+    if (!laporanKelas.absensi || laporanKelas.absensi.length === 0) {
+      alert('Tidak ada data absensi untuk kelas ini.');
+      return;
+    }
+
+    const filtered = laporanKelas.absensi.filter(s => isInMonth(s.tanggal, selectedMonth));
+    if (filtered.length === 0) {
+      alert('Tidak ada data absensi untuk bulan yang dipilih.');
+      return;
+    }
+
+    const bulanLabel = selectedMonth ? ` ${formatMonthLabel(selectedMonth)}` : '';
+    const titleText = `Laporan Kehadiran Per-Siswa${bulanLabel}`;
+
+    const mapelMap = {};
+    filtered.forEach(session => {
+      const mapelId = session.pengampu?.mapel?.id;
+      const mapelNama = session.pengampu?.mapel?.nama || '-';
+      if (!mapelMap[mapelId]) {
+        mapelMap[mapelId] = { nama: mapelNama, siswa: {} };
+      }
+      session.siswaDetail.forEach(d => {
+        const sid = d.siswaId;
+        if (!mapelMap[mapelId].siswa[sid]) {
+          mapelMap[mapelId].siswa[sid] = { id: sid, nama: d.siswa.nama, nis: d.siswa.nis, H: 0, S: 0, I: 0, A: 0 };
+        }
+        const s = d.status?.charAt(0);
+        const siswa = mapelMap[mapelId].siswa[sid];
+        if (s === 'H') siswa.H++;
+        else if (s === 'S') siswa.S++;
+        else if (s === 'I') siswa.I++;
+        else if (s === 'A') siswa.A++;
+      });
+    });
+
+    const mapelList = Object.values(mapelMap).sort((a, b) => a.nama.localeCompare(b.nama));
+    const filename = `Kehadiran_Siswa_${selectedKelas?.nama || 'unknown'}${selectedMonth ? '_' + selectedMonth : ''}`;
+    const kelasNama = selectedKelas?.nama || '-';
+
+    if (type === 'csv') {
+      let csvRows = [];
+      csvRows.push(['SMK NEGERI 1 ARAHAN']);
+      csvRows.push(['Jl. Raya Arahan, Kabupaten Indramayu, Jawa Barat']);
+      csvRows.push([]);
+      csvRows.push([titleText]);
+      csvRows.push([`Kelas: ${kelasNama}`]);
+      csvRows.push([`Wali Kelas: ${user?.nama || '-'}`]);
+      csvRows.push([]);
+
+      mapelList.forEach(mp => {
+        csvRows.push([`Mapel: ${mp.nama}`]);
+        csvRows.push(['No', 'NIS', 'Nama Siswa', 'Hadir', 'Sakit', 'Izin', 'Alpa']);
+        const siswaList = Object.values(mp.siswa).sort((a, b) => String(a.nis).localeCompare(String(b.nis), undefined, { numeric: true }));
+        siswaList.forEach((s, idx) => {
+          csvRows.push([idx + 1, s.nis, s.nama, s.H, s.S, s.I, s.A]);
+        });
+        csvRows.push([]);
+      });
+      handleExportCSV(filename, csvRows);
+    } else {
+      try {
+        const doc = new jsPDF('landscape');
+        let firstPage = true;
+
+        mapelList.forEach(mp => {
+          if (!firstPage) doc.addPage();
+          firstPage = false;
+
+          doc.setFontSize(14);
+          doc.text(titleText, 14, 15);
+          doc.setFontSize(11);
+          doc.text(`Kelas: ${kelasNama} — Mapel: ${mp.nama}`, 14, 23);
+          doc.setFontSize(10);
+          doc.text(`Wali Kelas: ${user?.nama || '-'}`, 14, 29);
+          doc.setFontSize(9);
+          doc.text('Keterangan: H=Hadir, S=Sakit, I=Izin, A=Alpa', 14, 35);
+
+          const siswaList = Object.values(mp.siswa).sort((a, b) => String(a.nis).localeCompare(String(b.nis), undefined, { numeric: true }));
+          const columns = [
+            { header: 'No', key: 'No' },
+            { header: 'NIS', key: 'NIS' },
+            { header: 'Nama Siswa', key: 'Nama' },
+            { header: 'Hadir', key: 'H' },
+            { header: 'Sakit', key: 'S' },
+            { header: 'Izin', key: 'I' },
+            { header: 'Alpa', key: 'A' }
+          ];
+          const body = siswaList.map((s, idx) => [
+            idx + 1, s.nis, s.nama, s.H, s.S, s.I, s.A
+          ]);
+
+          autoTable(doc, {
+            startY: 40,
+            theme: 'grid',
+            head: [columns.map(c => c.header)],
+            body,
+            styles: { fontSize: 9, cellPadding: 2 },
+            headStyles: { fillColor: [43, 62, 80], halign: 'center' },
+            bodyStyles: { halign: 'center' },
+            columnStyles: {
+              0: { cellWidth: 10, halign: 'center' },
+              1: { cellWidth: 30, halign: 'center' },
+              2: { halign: 'left', cellWidth: 65 },
+              3: { cellWidth: 20, halign: 'center' },
+              4: { cellWidth: 20, halign: 'center' },
+              5: { cellWidth: 20, halign: 'center' },
+              6: { cellWidth: 20, halign: 'center' }
             }
           });
         });
@@ -322,6 +490,32 @@ const WaliKelasScreen = () => {
         <div className="card" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Memuat data laporan...</div>
       ) : (
         <div className="flex flex-col gap-3">
+          {/* Month Filter */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+              <Filter size={16} style={{ color: 'var(--text-muted)' }} />
+              <label style={{ fontSize: '0.875rem', fontWeight: '500' }}>Filter Bulan:</label>
+            </div>
+            <select
+              className="input"
+              style={{ width: 'auto', minWidth: '180px', fontSize: '0.875rem' }}
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+            >
+              <option value="">Semua Bulan</option>
+              {availableMonths.map(m => (
+                <option key={m} value={m}>{formatMonthLabel(m)}</option>
+              ))}
+            </select>
+            {selectedMonth && (
+              <button
+                onClick={() => setSelectedMonth('')}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8125rem' }}
+              >
+                <X size={14} /> Reset
+              </button>
+            )}
+          </div>
           {/* Agenda Report */}
           <div className="card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--border-color)' }}>
             <div>
@@ -353,6 +547,24 @@ const WaliKelasScreen = () => {
                 <FileText size={16} /> Export PDF
               </button>
               <button className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center', color: '#27ae60', borderColor: '#27ae60' }} onClick={() => exportAbsensi('csv')}>
+                <FileSpreadsheet size={16} /> Export CSV
+              </button>
+            </div>
+          </div>
+
+          {/* Kehadiran per-Siswa Report */}
+          <div className="card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--border-color)' }}>
+            <div>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>Kehadiran per-Siswa</h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                Ringkasan kehadiran setiap siswa (Hadir/Sakit/Izin/Alpa) di semua mata pelajaran kelas {selectedKelas?.nama}.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center', backgroundColor: '#e74c3c' }} onClick={() => exportKehadiranSiswa('pdf')}>
+                <FileText size={16} /> Export PDF
+              </button>
+              <button className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center', color: '#27ae60', borderColor: '#27ae60' }} onClick={() => exportKehadiranSiswa('csv')}>
                 <FileSpreadsheet size={16} /> Export CSV
               </button>
             </div>

@@ -1,18 +1,48 @@
-import React from 'react';
-import { Download, FileText, FileSpreadsheet } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Download, FileText, FileSpreadsheet, Filter, X } from 'lucide-react';
 import { useAppStore } from '../../../lib/store';
 import Papa from 'papaparse';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+const MONTHS = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+];
+
 const LaporanScreen = () => {
   const { guru, mapel, kelas, siswa, tahunPelajaran, laporanAgenda, laporanAbsensi, fetchLaporanAgenda, fetchLaporanAbsensi } = useAppStore();
   const tahunAktif = tahunPelajaran.find(t => t.isActive);
+  const [selectedMonth, setSelectedMonth] = useState('');
 
   React.useEffect(() => {
     fetchLaporanAgenda();
     fetchLaporanAbsensi();
   }, [fetchLaporanAgenda, fetchLaporanAbsensi]);
+
+  const availableMonths = useMemo(() => {
+    const months = new Set();
+    [...laporanAgenda, ...laporanAbsensi].forEach(item => {
+      if (item.tanggal) {
+        const d = new Date(item.tanggal);
+        months.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+      }
+    });
+    return Array.from(months).sort();
+  }, [laporanAgenda, laporanAbsensi]);
+
+  const formatMonthLabel = (key) => {
+    if (!key) return 'Semua Bulan';
+    const [y, m] = key.split('-');
+    return `${MONTHS[parseInt(m) - 1]} ${y}`;
+  };
+
+  const isInMonth = (dateString, monthKey) => {
+    if (!monthKey) return true;
+    const d = new Date(dateString);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    return key === monthKey;
+  };
 
   // --- CSV EXPORT LOGIC ---
   const handleExportCSV = (filename, data) => {
@@ -155,7 +185,8 @@ const LaporanScreen = () => {
   };
 
   const exportAgenda = (type) => {
-    const formatted = laporanAgenda.map(a => ({
+    const filtered = laporanAgenda.filter(a => isInMonth(a.tanggal, selectedMonth));
+    const formatted = filtered.map(a => ({
       Tanggal: formatDate(a.tanggal),
       Guru: a.pengampu?.guru?.nama,
       Kelas: a.pengampu?.kelas?.nama,
@@ -171,17 +202,24 @@ const LaporanScreen = () => {
       { header: 'Materi', key: 'Materi' }
     ];
 
+    const bulanLabel = selectedMonth ? ` - ${formatMonthLabel(selectedMonth)}` : '';
+    const title = `Jurnal Agenda Mengajar${bulanLabel}`;
+
     if (type === 'csv') {
-      handleExportCSVWithHeader('Laporan_Agenda', 'Jurnal Agenda Mengajar', columns, formatted);
+      handleExportCSVWithHeader(`Laporan_Agenda${selectedMonth ? '_' + selectedMonth : ''}`, title, columns, formatted);
     } else {
-      handleExportPDF('Laporan_Agenda', 'Jurnal Agenda Mengajar', columns, formatted);
+      handleExportPDF(`Laporan_Agenda${selectedMonth ? '_' + selectedMonth : ''}`, title, columns, formatted);
     }
   };
 
   const exportAbsensi = (type) => {
+    const filtered = laporanAbsensi.filter(s => isInMonth(s.tanggal, selectedMonth));
+    const bulanLabel = selectedMonth ? ` - ${formatMonthLabel(selectedMonth)}` : '';
+    const titleText = `Laporan Rekapitulasi Absensi Siswa${bulanLabel}`;
+
     // 1. Grouping Data (Matrix Transformation)
     const groups = {};
-    laporanAbsensi.forEach(session => {
+    filtered.forEach(session => {
       const pId = session.pengampuId;
       if (!groups[pId]) {
         groups[pId] = { pengampu: session.pengampu, sessions: [], siswaMap: new Map() };
@@ -238,7 +276,7 @@ const LaporanScreen = () => {
       
       matrices.forEach((m, idx) => {
         // Header info matching PDF
-        csvRows.push(['Laporan Rekapitulasi Absensi Siswa']);
+        csvRows.push([titleText]);
         csvRows.push([`Kelas: ${m.kelas}    Mapel: ${m.mapel}    Guru: ${m.guru}`]);
         csvRows.push(['Keterangan: H=Hadir, S=Sakit, I=Izin, A=Alpa']);
         csvRows.push([]); // Spacer
@@ -264,7 +302,7 @@ const LaporanScreen = () => {
         csvRows.push([]);
       });
 
-      handleExportCSV('Laporan_Absensi_Matrix', csvRows);
+      handleExportCSV(`Laporan_Absensi_Matrix${selectedMonth ? '_' + selectedMonth : ''}`, csvRows);
     }
  else {
       try {
@@ -275,7 +313,7 @@ const LaporanScreen = () => {
           if (index > 0) doc.addPage();
           
           doc.setFontSize(14);
-          doc.text('Laporan Rekapitulasi Absensi Siswa', 14, 15);
+          doc.text(titleText, 14, 15);
           doc.setFontSize(10);
           doc.text(`Kelas: ${m.kelas}    Mapel: ${m.mapel}    Guru: ${m.guru}`, 14, 22);
           doc.text('Keterangan: H=Hadir, S=Sakit, I=Izin, A=Alpa', 14, 27);
@@ -305,7 +343,119 @@ const LaporanScreen = () => {
           });
         });
 
-        doc.save('Laporan_Absensi_Matrix.pdf');
+        doc.save(`Laporan_Absensi_Matrix${selectedMonth ? '_' + selectedMonth : ''}.pdf`);
+      } catch (err) {
+        console.error(err);
+        alert('Gagal export PDF');
+      }
+    }
+  };
+
+  const exportKehadiranSiswa = (type) => {
+    const filtered = laporanAbsensi.filter(s => isInMonth(s.tanggal, selectedMonth));
+    const bulanLabel = selectedMonth ? ` - ${formatMonthLabel(selectedMonth)}` : '';
+    const titleText = `Laporan Kehadiran Per-Siswa${bulanLabel}`;
+    const filename = `Laporan_Kehadiran_Per_Siswa${selectedMonth ? '_' + selectedMonth : ''}`;
+
+    // Group by kelas -> mapel -> siswa
+    const kelasMap = {};
+    filtered.forEach(session => {
+      const kelasId = session.pengampu?.kelas?.id;
+      const kelasNama = session.pengampu?.kelas?.nama || '-';
+      const mapelId = session.pengampu?.mapel?.id;
+      const mapelNama = session.pengampu?.mapel?.nama || '-';
+      if (!kelasMap[kelasId]) {
+        kelasMap[kelasId] = { nama: kelasNama, mapel: {} };
+      }
+      if (!kelasMap[kelasId].mapel[mapelId]) {
+        kelasMap[kelasId].mapel[mapelId] = { nama: mapelNama, siswa: {} };
+      }
+      session.siswaDetail.forEach(d => {
+        const sid = d.siswaId;
+        if (!kelasMap[kelasId].mapel[mapelId].siswa[sid]) {
+          kelasMap[kelasId].mapel[mapelId].siswa[sid] = { id: sid, nama: d.siswa.nama, nis: d.siswa.nis, H: 0, S: 0, I: 0, A: 0 };
+        }
+        const s = d.status?.charAt(0);
+        const siswa = kelasMap[kelasId].mapel[mapelId].siswa[sid];
+        if (s === 'H') siswa.H++;
+        else if (s === 'S') siswa.S++;
+        else if (s === 'I') siswa.I++;
+        else if (s === 'A') siswa.A++;
+      });
+    });
+
+    const kelasList = Object.values(kelasMap).sort((a, b) => a.nama.localeCompare(b.nama));
+
+    if (type === 'csv') {
+      let csvRows = [];
+      kelasList.forEach(k => {
+        csvRows.push([titleText]);
+        csvRows.push([`Kelas: ${k.nama}`]);
+        csvRows.push([]);
+        Object.values(k.mapel).sort((a, b) => a.nama.localeCompare(b.nama)).forEach(mp => {
+          csvRows.push([`Mapel: ${mp.nama}`]);
+          csvRows.push(['No', 'NIS', 'Nama Siswa', 'Hadir', 'Sakit', 'Izin', 'Alpa']);
+          const siswaList = Object.values(mp.siswa).sort((a, b) => String(a.nis).localeCompare(String(b.nis), undefined, { numeric: true }));
+          siswaList.forEach((s, idx) => {
+            csvRows.push([idx + 1, s.nis, s.nama, s.H, s.S, s.I, s.A]);
+          });
+          csvRows.push([]);
+        });
+        csvRows.push([]);
+        csvRows.push([]);
+      });
+      handleExportCSV(filename, csvRows);
+    } else {
+      try {
+        const doc = new jsPDF('landscape');
+        let firstPage = true;
+        kelasList.forEach(k => {
+          Object.values(k.mapel).sort((a, b) => a.nama.localeCompare(b.nama)).forEach(mp => {
+            if (!firstPage) doc.addPage();
+            firstPage = false;
+
+            doc.setFontSize(14);
+            doc.text(titleText, 14, 15);
+            doc.setFontSize(11);
+            doc.text(`Kelas: ${k.nama} — Mapel: ${mp.nama}`, 14, 23);
+            doc.setFontSize(9);
+            doc.text('Keterangan: H=Hadir, S=Sakit, I=Izin, A=Alpa', 14, 29);
+
+            const siswaList = Object.values(mp.siswa).sort((a, b) => String(a.nis).localeCompare(String(b.nis), undefined, { numeric: true }));
+            const columns = [
+              { header: 'No', key: 'No' },
+              { header: 'NIS', key: 'NIS' },
+              { header: 'Nama Siswa', key: 'Nama' },
+              { header: 'Hadir', key: 'H' },
+              { header: 'Sakit', key: 'S' },
+              { header: 'Izin', key: 'I' },
+              { header: 'Alpa', key: 'A' }
+            ];
+            const body = siswaList.map((s, idx) => [
+              idx + 1, s.nis, s.nama, s.H, s.S, s.I, s.A
+            ]);
+
+            autoTable(doc, {
+              startY: 34,
+              theme: 'grid',
+              head: [columns.map(c => c.header)],
+              body,
+              styles: { fontSize: 9, cellPadding: 2 },
+              headStyles: { fillColor: [43, 62, 80], halign: 'center' },
+              bodyStyles: { halign: 'center' },
+              columnStyles: {
+                0: { cellWidth: 10, halign: 'center' },
+                1: { cellWidth: 30, halign: 'center' },
+                2: { halign: 'left', cellWidth: 65 },
+                3: { cellWidth: 20, halign: 'center' },
+                4: { cellWidth: 20, halign: 'center' },
+                5: { cellWidth: 20, halign: 'center' },
+                6: { cellWidth: 20, halign: 'center' }
+              }
+            });
+          });
+        });
+        doc.save(`${filename}.pdf`);
       } catch (err) {
         console.error(err);
         alert('Gagal export PDF');
@@ -366,7 +516,33 @@ const LaporanScreen = () => {
         Laporan Transaksional
       </h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+          <Filter size={16} style={{ color: 'var(--text-muted)' }} />
+          <label style={{ fontSize: '0.875rem', fontWeight: '500' }}>Filter Bulan:</label>
+        </div>
+        <select
+          className="input"
+          style={{ width: 'auto', minWidth: '200px' }}
+          value={selectedMonth}
+          onChange={(e) => setSelectedMonth(e.target.value)}
+        >
+          <option value="">Semua Bulan</option>
+          {availableMonths.map(m => (
+            <option key={m} value={m}>{formatMonthLabel(m)}</option>
+          ))}
+        </select>
+        {selectedMonth && (
+          <button
+            onClick={() => setSelectedMonth('')}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8125rem' }}
+          >
+            <X size={14} /> Reset
+          </button>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <ReportCard 
           title="Jurnal Agenda Guru" 
           description="Rekap catatan jurnal mengajar guru selama satu semester."
@@ -378,6 +554,12 @@ const LaporanScreen = () => {
           description="Daftar rekap kehadiran siswa per kelas dan per mata pelajaran."
           onPdf={() => exportAbsensi('pdf')}
           onCsv={() => exportAbsensi('csv')}
+        />
+        <ReportCard 
+          title="Kehadiran per-Siswa" 
+          description="Ringkasan kehadiran setiap siswa (Hadir/Sakit/Izin/Alpa) di semua mata pelajaran."
+          onPdf={() => exportKehadiranSiswa('pdf')}
+          onCsv={() => exportKehadiranSiswa('csv')}
         />
       </div>
     </div>
