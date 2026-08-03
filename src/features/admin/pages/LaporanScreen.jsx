@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Download, FileText, FileSpreadsheet, Filter, X } from 'lucide-react';
+import { Download, FileText, FileSpreadsheet, Filter, X, CalendarDays } from 'lucide-react';
 import { useAppStore } from '../../../lib/store';
 import Papa from 'papaparse';
 import { jsPDF } from 'jspdf';
@@ -11,14 +11,16 @@ const MONTHS = [
 ];
 
 const LaporanScreen = () => {
-  const { guru, mapel, kelas, siswa, tahunPelajaran, laporanAgenda, laporanAbsensi, fetchLaporanAgenda, fetchLaporanAbsensi } = useAppStore();
+  const { guru, mapel, kelas, siswa, tahunPelajaran, laporanAgenda, laporanAbsensi, laporanPiket, fetchLaporanAgenda, fetchLaporanAbsensi, fetchLaporanPiket } = useAppStore();
   const tahunAktif = tahunPelajaran.find(t => t.isActive);
   const [selectedMonth, setSelectedMonth] = useState('');
+  const [selectedPiketDate, setSelectedPiketDate] = useState('');
 
   React.useEffect(() => {
     fetchLaporanAgenda();
     fetchLaporanAbsensi();
-  }, [fetchLaporanAgenda, fetchLaporanAbsensi]);
+    fetchLaporanPiket();
+  }, [fetchLaporanAgenda, fetchLaporanAbsensi, fetchLaporanPiket]);
 
   const availableMonths = useMemo(() => {
     const months = new Set();
@@ -463,8 +465,93 @@ const LaporanScreen = () => {
     }
   };
 
+  const exportPiket = (type) => {
+    const filtered = selectedPiketDate
+      ? laporanPiket.filter(p => {
+          const d = new Date(p.tanggal);
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          return key === selectedPiketDate;
+        })
+      : laporanPiket;
+
+    const formatted = filtered.map(p => ({
+      Tanggal: formatDate(p.tanggal),
+      Guru: p.pengampu?.guru?.nama || '-',
+      Kelas: p.pengampu?.kelas?.nama || '-',
+      Mapel: p.pengampu?.mapel?.nama || '-',
+      Jam: p.pengampu?.jamKe ? `Jam ke-${p.pengampu.jamKe}` : '-',
+      Status: p.status === 'hadir' ? 'Hadir' : p.status === 'terlambat' ? 'Terlambat' : p.status === 'tidak_hadir' ? 'Tidak Hadir' : p.status,
+      Catatan: p.catatan || '-',
+      Petugas: p.piketBy?.nama || '-'
+    }));
+
+    const columns = [
+      { header: 'Tanggal', key: 'Tanggal' },
+      { header: 'Guru', key: 'Guru' },
+      { header: 'Kelas', key: 'Kelas' },
+      { header: 'Mapel', key: 'Mapel' },
+      { header: 'Jam', key: 'Jam' },
+      { header: 'Status', key: 'Status' },
+      { header: 'Catatan', key: 'Catatan' },
+      { header: 'Petugas Piket', key: 'Petugas' }
+    ];
+
+    const dateLabel = selectedPiketDate ? ` - ${selectedPiketDate}` : '';
+    const title = `Rekap Kehadiran Guru di Kelas${dateLabel}`;
+    const filename = `Rekap_Kehadiran_Guru${selectedPiketDate ? '_' + selectedPiketDate : ''}`;
+
+    if (type === 'xls') {
+      let csvRows = [];
+      csvRows.push(['SMK NEGERI 1 ARAHAN']);
+      csvRows.push(['Jl. Raya Arahan, Kabupaten Indramayu, Jawa Barat']);
+      csvRows.push([]);
+      csvRows.push([title]);
+      csvRows.push([]);
+      csvRows.push(columns.map(c => c.header));
+      formatted.forEach(item => {
+        csvRows.push(columns.map(c => item[c.key]));
+      });
+
+      const csv = Papa.unparse(csvRows);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${filename}.xls`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      try {
+        const doc = new jsPDF();
+        doc.setFontSize(16);
+        doc.text('SMK NEGERI 1 ARAHAN', 105, 15, { align: 'center' });
+        doc.setFontSize(10);
+        doc.text('Jl. Raya Arahan, Kabupaten Indramayu, Jawa Barat', 105, 22, { align: 'center' });
+        doc.line(14, 25, 196, 25);
+        doc.setFontSize(14);
+        doc.text(title, 14, 35);
+
+        autoTable(doc, {
+          startY: 40,
+          head: [columns.map(c => c.header)],
+          body: formatted.map(item => columns.map(c => item[c.key])),
+          styles: { fontSize: 9 },
+          headStyles: { fillColor: [43, 62, 80] },
+          alternateRowStyles: { fillColor: [245, 245, 245] }
+        });
+
+        doc.save(`${filename}.pdf`);
+      } catch (err) {
+        console.error(err);
+        alert('Gagal export PDF');
+      }
+    }
+  };
+
   // UI Components
-  const ReportCard = ({ title, description, onPdf, onCsv }) => (
+  const ReportCard = ({ title, description, onPdf, onCsv, xlsLabel = false }) => (
     <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--border-color)' }}>
       <div>
         <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>{title}</h3>
@@ -475,7 +562,7 @@ const LaporanScreen = () => {
           <FileText size={16} /> Export PDF
         </button>
         <button className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center', color: '#27ae60', borderColor: '#27ae60' }} onClick={onCsv}>
-          <FileSpreadsheet size={16} /> Export CSV
+          <FileSpreadsheet size={16} /> {xlsLabel ? 'Export XLS' : 'Export CSV'}
         </button>
       </div>
     </div>
@@ -560,6 +647,48 @@ const LaporanScreen = () => {
           description="Ringkasan kehadiran setiap siswa (Hadir/Sakit/Izin/Alpa) di semua mata pelajaran."
           onPdf={() => exportKehadiranSiswa('pdf')}
           onCsv={() => exportKehadiranSiswa('csv')}
+        />
+      </div>
+
+      <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginTop: '1rem', borderBottom: '2px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+        Laporan Petugas Piket
+      </h2>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+          <CalendarDays size={16} style={{ color: 'var(--text-muted)' }} />
+          <label style={{ fontSize: '0.875rem', fontWeight: '500' }}>Filter Tanggal:</label>
+        </div>
+        <input
+          type="date"
+          className="input"
+          style={{ width: 'auto', minWidth: '200px' }}
+          value={selectedPiketDate}
+          onChange={(e) => {
+            setSelectedPiketDate(e.target.value);
+            fetchLaporanPiket(e.target.value);
+          }}
+        />
+        {selectedPiketDate && (
+          <button
+            onClick={() => {
+              setSelectedPiketDate('');
+              fetchLaporanPiket();
+            }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8125rem' }}
+          >
+            <X size={14} /> Reset
+          </button>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <ReportCard 
+          title="Rekap Kehadiran Guru di Kelas" 
+          description="Daftar kehadiran guru berdasarkan pantauan petugas piket per hari."
+          onPdf={() => exportPiket('pdf')}
+          onCsv={() => exportPiket('xls')}
+          xlsLabel={true}
         />
       </div>
     </div>

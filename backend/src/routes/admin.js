@@ -334,6 +334,33 @@ router.get('/laporan/absensi', async (req, res) => {
   res.json(data);
 });
 
+// --- LAPORAN PIKET ---
+router.get('/laporan/piket', async (req, res) => {
+  try {
+    const { date } = req.query;
+    const where = {};
+    if (date) {
+      where.tanggal = new Date(date);
+    }
+
+    const data = await prisma.piket.findMany({
+      where,
+      include: {
+        pengampu: {
+          include: { guru: true, kelas: true, mapel: true }
+        },
+        piketBy: true
+      },
+      orderBy: { tanggal: 'desc' }
+    });
+
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal mengambil laporan piket' });
+  }
+});
+
 router.put('/pengampu/:id', async (req, res) => {
   try {
     const { guruId, mapelId, hari, jamKe, jamSampai } = req.body;

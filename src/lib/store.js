@@ -19,6 +19,7 @@ export const useAppStore = create((set, get) => ({
   riwayatGuru: { agenda: [], absensi: [], nilai: [] },
   laporanAgenda: [],
   laporanAbsensi: [],
+  laporanPiket: [],
   kelasWali: [],
   laporanKelas: { agenda: [], absensi: [] },
   nilaiKelas: { nilai: [], pengampu: [] },
@@ -405,6 +406,16 @@ export const useAppStore = create((set, get) => ({
     const res = await fetch(`${API_BASE}/admin/laporan/absensi`);
     const data = await res.json();
     set({ laporanAbsensi: data });
+  },
+
+  fetchLaporanPiket: async (date = '') => {
+    const url = date
+      ? `${API_BASE}/admin/laporan/piket?date=${date}`
+      : `${API_BASE}/admin/laporan/piket`;
+    const res = await fetch(url);
+    const data = await res.json();
+    set({ laporanPiket: data });
+    return data;
   },
 
   fetchSiswaKelas: async (kelasId) => {
