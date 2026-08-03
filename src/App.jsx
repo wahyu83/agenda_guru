@@ -17,6 +17,7 @@ import MapelScreen from './features/admin/pages/MapelScreen';
 import KelasScreen from './features/admin/pages/KelasScreen';
 import SiswaScreen from './features/admin/pages/SiswaScreen';
 import LaporanScreen from './features/admin/pages/LaporanScreen';
+import JamPelajaranScreen from './features/admin/pages/JamPelajaranScreen';
 
 // Guru Pages
 import GuruDashboard from './features/guru/pages/GuruDashboard';
@@ -55,6 +56,7 @@ function App() {
           <Route path="kelas" element={<KelasScreen />} />
           <Route path="siswa" element={<SiswaScreen />} />
           <Route path="laporan" element={<LaporanScreen />} />
+          <Route path="jam-pelajaran" element={<JamPelajaranScreen />} />
         </Route>
 
         {/* Guru Routes */}

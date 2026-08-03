@@ -138,3 +138,10 @@ model RencanaPertemuan {
   updatedAt       DateTime @updatedAt
   pengampu        Pengampu @relation(fields: [pengampuId], references: [id], onDelete: Cascade)
 }
+
+model JamPelajaran {
+  id      Int    @id @default(autoincrement())
+  jamKe   Int    @unique
+  mulai   String
+  selesai String
+}

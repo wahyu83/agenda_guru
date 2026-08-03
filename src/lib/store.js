@@ -22,6 +22,7 @@ export const useAppStore = create((set, get) => ({
   kelasWali: [],
   laporanKelas: { agenda: [], absensi: [] },
   nilaiKelas: { nilai: [], pengampu: [] },
+  jamPelajaran: [],
   user: JSON.parse(localStorage.getItem('user')) || null,
 
   setUser: (userData) => set({ user: userData }),
@@ -574,6 +575,39 @@ export const useAppStore = create((set, get) => ({
       const errData = await res.json().catch(() => ({}));
       throw new Error(errData.error || 'Gagal menyalin rencana pertemuan');
     }
+    return await res.json();
+  },
+
+  // --- JAM PELAJARAN ---
+  fetchJamPelajaran: async () => {
+    const res = await fetch(`${API_BASE}/admin/jam-pelajaran`);
+    const data = await res.json();
+    set({ jamPelajaran: data });
+  },
+
+  saveJamPelajaran: async (data) => {
+    const res = await fetch(`${API_BASE}/admin/jam-pelajaran`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Gagal menyimpan jam pelajaran');
+    return await res.json();
+  },
+
+  updateJamPelajaran: async (id, data) => {
+    const res = await fetch(`${API_BASE}/admin/jam-pelajaran/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Gagal mengupdate jam pelajaran');
+    return await res.json();
+  },
+
+  deleteJamPelajaran: async (id) => {
+    const res = await fetch(`${API_BASE}/admin/jam-pelajaran/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Gagal menghapus jam pelajaran');
     return await res.json();
   }
 }));

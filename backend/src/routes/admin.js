@@ -359,4 +359,40 @@ router.delete('/pengampu/:id', async (req, res) => {
   res.json({ success: true });
 });
 
+// --- JAM PELAJARAN ---
+router.get('/jam-pelajaran', async (req, res) => {
+  const data = await prisma.jamPelajaran.findMany({ orderBy: { jamKe: 'asc' } });
+  res.json(data);
+});
+
+router.post('/jam-pelajaran', async (req, res) => {
+  try {
+    const { jamKe, mulai, selesai } = req.body;
+    const data = await prisma.jamPelajaran.create({
+      data: { jamKe: parseInt(jamKe), mulai, selesai }
+    });
+    res.json(data);
+  } catch (err) {
+    res.status(400).json({ error: 'Gagal menambah jam pelajaran.' });
+  }
+});
+
+router.put('/jam-pelajaran/:id', async (req, res) => {
+  try {
+    const { jamKe, mulai, selesai } = req.body;
+    const data = await prisma.jamPelajaran.update({
+      where: { id: parseInt(req.params.id) },
+      data: { jamKe: parseInt(jamKe), mulai, selesai }
+    });
+    res.json(data);
+  } catch (err) {
+    res.status(400).json({ error: 'Gagal mengupdate jam pelajaran.' });
+  }
+});
+
+router.delete('/jam-pelajaran/:id', async (req, res) => {
+  await prisma.jamPelajaran.delete({ where: { id: parseInt(req.params.id) } });
+  res.json({ success: true });
+});
+
 module.exports = router;
