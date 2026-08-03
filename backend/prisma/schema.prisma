@@ -18,6 +18,7 @@ model User {
   updatedAt DateTime   @updatedAt
   pengampu  Pengampu[]
   kelasWali Kelas[]    @relation("WaliKelas")
+  piket     Piket[]
 }
 
 model TahunPelajaran {
@@ -77,6 +78,7 @@ model Pengampu {
   agenda  Agenda[]
   nilai   Nilai[]
   rencanaPertemuan RencanaPertemuan[]
+  piket   Piket[]
   guru    User          @relation(fields: [guruId], references: [id], onDelete: Cascade)
   kelas   Kelas         @relation(fields: [kelasId], references: [id], onDelete: Cascade)
   mapel   MataPelajaran @relation(fields: [mapelId], references: [id], onDelete: Cascade)
@@ -144,4 +146,18 @@ model JamPelajaran {
   jamKe   Int    @unique
   mulai   String
   selesai String
+}
+
+model Piket {
+  id         Int      @id @default(autoincrement())
+  pengampuId Int
+  piketById  Int
+  tanggal    DateTime @db.Date
+  status     String   @default("hadir")
+  catatan    String?
+  createdAt  DateTime @default(now())
+  pengampu   Pengampu @relation(fields: [pengampuId], references: [id], onDelete: Cascade)
+  piketBy    User     @relation(fields: [piketById], references: [id], onDelete: Cascade)
+
+  @@unique([pengampuId, tanggal])
 }

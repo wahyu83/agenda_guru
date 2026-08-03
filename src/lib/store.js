@@ -609,5 +609,24 @@ export const useAppStore = create((set, get) => ({
     const res = await fetch(`${API_BASE}/admin/jam-pelajaran/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Gagal menghapus jam pelajaran');
     return await res.json();
+  },
+
+  // --- PIKET ---
+  jadwalPiket: [],
+
+  fetchJadwalPiket: async () => {
+    const res = await fetch(`${API_BASE}/piket/jadwal-hari-ini`);
+    const data = await res.json();
+    set({ jadwalPiket: data });
+  },
+
+  savePiket: async (data) => {
+    const res = await fetch(`${API_BASE}/piket`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Gagal menyimpan piket');
+    return await res.json();
   }
 }));

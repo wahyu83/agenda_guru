@@ -7,7 +7,7 @@ const GuruScreen = () => {
   const { guru, addGuru, deleteGuru, updateGuru, importGuru, resetPassword } = useAppStore();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ nama: '', nip: '', username: '', password: '' });
+  const [formData, setFormData] = useState({ nama: '', nip: '', username: '', password: '', role: 'guru' });
   const fileInputRef = useRef(null);
 
   const handleImport = (e) => {
@@ -28,13 +28,13 @@ const GuruScreen = () => {
 
   const handleEditClick = (item) => {
     setEditingId(item.id);
-    setFormData({ nama: item.nama, nip: item.nip, username: item.username, password: '' });
+    setFormData({ nama: item.nama, nip: item.nip, username: item.username, password: '', role: item.role || 'guru' });
     setShowForm(true);
   };
 
   const handleAddClick = () => {
     setEditingId(null);
-    setFormData({ nama: '', nip: '', username: '', password: '' });
+    setFormData({ nama: '', nip: '', username: '', password: '', role: 'guru' });
     setShowForm(true);
   };
 
@@ -46,14 +46,16 @@ const GuruScreen = () => {
           nama: formData.nama, 
           nip: formData.nip || '-', 
           username: formData.username,
-          password: formData.password 
+          password: formData.password,
+          role: formData.role
         });
       } else {
         await addGuru({ 
           nama: formData.nama, 
           nip: formData.nip || '-', 
           username: formData.username,
-          password: formData.password 
+          password: formData.password,
+          role: formData.role
         });
       }
       setShowForm(false);
@@ -132,6 +134,17 @@ const GuruScreen = () => {
                 placeholder="Kosongkan untuk default (guru123)"
               />
             </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>Role</label>
+              <select 
+                className="input" 
+                value={formData.role}
+                onChange={(e) => setFormData({...formData, role: e.target.value})}
+              >
+                <option value="guru">Guru</option>
+                <option value="guru_piket">Guru Piket</option>
+              </select>
+            </div>
             <div className="md:col-span-2 flex gap-2 justify-end mt-2">
               <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>Batal</button>
               <button type="submit" className="btn btn-primary">Simpan</button>
@@ -147,6 +160,7 @@ const GuruScreen = () => {
               <th style={{ padding: '1rem', color: 'var(--text-muted)', fontWeight: '600' }}>NIP / NUPTK</th>
               <th style={{ padding: '1rem', color: 'var(--text-muted)', fontWeight: '600' }}>Nama Lengkap</th>
               <th style={{ padding: '1rem', color: 'var(--text-muted)', fontWeight: '600' }}>Username</th>
+              <th style={{ padding: '1rem', color: 'var(--text-muted)', fontWeight: '600' }}>Role</th>
               <th style={{ padding: '1rem', color: 'var(--text-muted)', fontWeight: '600', textAlign: 'right' }}>Aksi</th>
             </tr>
           </thead>
@@ -156,6 +170,16 @@ const GuruScreen = () => {
                 <td style={{ padding: '1rem', color: 'var(--text-muted)' }}>{item.nip}</td>
                 <td style={{ padding: '1rem', fontWeight: '500' }}>{item.nama}</td>
                 <td style={{ padding: '1rem' }}>{item.username}</td>
+                <td style={{ padding: '1rem' }}>
+                  <span style={{
+                    fontSize: '0.75rem', padding: '0.15rem 0.5rem', borderRadius: 'var(--radius-full)',
+                    backgroundColor: item.role === 'guru_piket' ? 'var(--warning)20' : 'var(--primary-light)',
+                    color: item.role === 'guru_piket' ? 'var(--warning)' : 'var(--primary)',
+                    fontWeight: '600'
+                  }}>
+                    {item.role === 'guru_piket' ? 'Guru Piket' : 'Guru'}
+                  </span>
+                </td>
                 <td style={{ padding: '1rem', textAlign: 'right' }}>
                   <div className="flex justify-end gap-2">
                     <button 

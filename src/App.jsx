@@ -31,6 +31,10 @@ import NilaiScreen from './features/guru/pages/NilaiScreen';
 import NilaiEditScreen from './features/guru/pages/NilaiEditScreen';
 import RencanaScreen from './features/guru/pages/RencanaScreen';
 
+// Piket
+import PiketLayout from './features/piket/PiketLayout';
+import PiketScreen from './features/piket/PiketScreen';
+
 function App() {
   const fetchMasterData = useAppStore((state) => state.fetchMasterData);
 
@@ -71,6 +75,11 @@ function App() {
           <Route path="nilai-edit" element={<NilaiEditScreen />} />
           <Route path="rencana/:tugasId" element={<RencanaScreen />} />
           <Route path="wali-kelas" element={<WaliKelasScreen />} />
+        </Route>
+
+        {/* Piket Routes */}
+        <Route path="/piket" element={<PiketLayout />}>
+          <Route index element={<PiketScreen />} />
         </Route>
 
         {/* Catch all */}

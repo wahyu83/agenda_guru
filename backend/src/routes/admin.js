@@ -44,12 +44,11 @@ router.get('/guru', async (req, res) => {
 });
 
 router.post('/guru', async (req, res) => {
-  const { nama, nip, username, password } = req.body;
-  // Fallback default password jika tidak dikirim
+  const { nama, nip, username, password, role } = req.body;
   const bcrypt = require('bcrypt');
   const hashedPassword = await bcrypt.hash(password || 'guru123', 10);
   const data = await prisma.user.create({
-    data: { nama, nip, username, password: hashedPassword, role: 'guru' }
+    data: { nama, nip, username, password: hashedPassword, role: role || 'guru' }
   });
   res.json(data);
 });
@@ -60,8 +59,9 @@ router.delete('/guru/:id', async (req, res) => {
 });
 
 router.put('/guru/:id', async (req, res) => {
-  const { nama, nip, username, password } = req.body;
+  const { nama, nip, username, password, role } = req.body;
   const updateData = { nama, nip, username };
+  if (role) updateData.role = role;
   
   if (password && password.trim() !== '') {
     const bcrypt = require('bcrypt');
