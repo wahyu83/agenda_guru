@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppStore } from '../../lib/store';
 import { Plus, Trash2, FileText, Clock, ArrowRight, ArrowLeft, X, Download } from 'lucide-react';
 import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const formatDateISO = (date) => {
   const year = date.getFullYear();
@@ -21,6 +22,8 @@ const IzinSiswaScreen = () => {
   const [alasan, setAlasan] = useState('');
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
+  const [pdfItem, setPdfItem] = useState(null);
+  const receiptRef = useRef(null);
 
   const todayStr = formatDateISO(new Date());
 
@@ -40,6 +43,52 @@ const IzinSiswaScreen = () => {
       return () => clearTimeout(t);
     }
   }, [toast]);
+
+  // Auto-generate PDF when pdfItem changes and receiptRef is ready
+  useEffect(() => {
+    if (!pdfItem || !receiptRef.current) return;
+
+    const generate = async () => {
+      try {
+        // Wait for DOM to render
+        await new Promise((r) => setTimeout(r, 100));
+
+        const canvas = await html2canvas(receiptRef.current, {
+          scale: 3,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          width: receiptRef.current.offsetWidth,
+          height: receiptRef.current.offsetHeight
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+
+        // PDF size: 80mm width, auto height based on canvas ratio
+        const pdfWidth = 80;
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+        const doc = new jsPDF({
+          unit: 'mm',
+          format: [pdfWidth, pdfHeight],
+          orientation: 'portrait'
+        });
+
+        doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+
+        const fileName = `izin_${pdfItem.siswa?.nama?.replace(/\s+/g, '_') || 'siswa'}_${todayStr}.pdf`;
+        doc.save(fileName);
+
+        setToast({ type: 'success', message: 'PDF berhasil diunduh' });
+        setPdfItem(null);
+      } catch (err) {
+        console.error('PDF generation error:', err);
+        setToast({ type: 'error', message: 'Gagal membuat PDF: ' + err.message });
+        setPdfItem(null);
+      }
+    };
+
+    generate();
+  }, [pdfItem, todayStr]);
 
   const siswaOptions = useMemo(() => {
     return siswaKelasAktif || [];
@@ -85,121 +134,124 @@ const IzinSiswaScreen = () => {
     }
   };
 
-  // Generate PDF using jsPDF (80mm thermal receipt)
-  const generateIzinPDF = (item) => {
-    try {
-      const doc = new jsPDF({
-        unit: 'mm',
-        format: [80, 200],
-        orientation: 'portrait'
-      });
-
-      const pageWidth = 80;
-      const margin = 4;
-      const contentWidth = pageWidth - (margin * 2);
-      let y = 8;
-
-      // Header
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
-      doc.text('SURAT IZIN SISWA', pageWidth / 2, y, { align: 'center' });
-      y += 5;
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.text('SMKN 1 Arahan', pageWidth / 2, y, { align: 'center' });
-      y += 4;
-
-      const today = new Date();
-      const dateStr = today.toLocaleDateString('id-ID', {
-        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-      });
-      doc.setFontSize(9);
-      doc.text(dateStr, pageWidth / 2, y, { align: 'center' });
-      y += 6;
-
-      // Divider
-      doc.setDrawColor(0);
-      doc.setLineWidth(0.3);
-      doc.line(margin, y, pageWidth - margin, y);
-      y += 5;
-
-      // Helper to add label-value row
-      const addRow = (label, value, isBold = false) => {
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
-        doc.text(label, margin, y);
-        doc.setFont('helvetica', isBold ? 'bold' : 'normal');
-        doc.setFontSize(9);
-        const textLines = doc.splitTextToSize(value, contentWidth - 25);
-        doc.text(textLines, pageWidth - margin, y, { align: 'right' });
-        y += (textLines.length * 3.5) + 1.5;
-      };
-
-      addRow('Nama', item.siswa?.nama || '-');
-      addRow('Kelas', item.kelas?.nama || '-');
-      addRow('NIS', item.siswa?.nis || '-');
-
-      const jenisLabel = item.jenisIzin === 'masuk'
-        ? 'IZIN MASUK (Telat)'
-        : 'IZIN KELUAR (Pulang)';
-      addRow('Jenis Izin', jenisLabel, true);
-
-      addRow('Jam', item.jam || '-');
-
-      // Alasan (multiline)
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9);
-      doc.text('Alasan:', margin, y);
-      y += 3.5;
-      doc.setFont('helvetica', 'normal');
-      const alasanLines = doc.splitTextToSize(item.alasan || '-', contentWidth);
-      doc.text(alasanLines, margin, y);
-      y += (alasanLines.length * 3.5) + 3;
-
-      // Divider
-      doc.line(margin, y, pageWidth - margin, y);
-      y += 5;
-
-      // Footer info
-      const now = new Date();
-      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-      doc.setFontSize(8);
-      doc.text(`Dicetak: ${dateStr} ${timeStr}`, margin, y);
-      y += 3.5;
-      doc.text(`Oleh: ${item.guruPiket?.nama || user?.nama || '-'}`, margin, y);
-      y += 8;
-
-      // Signature
-      doc.setFontSize(9);
-      doc.text('Tanda Tangan', pageWidth - margin - 25, y);
-      y += 12;
-      doc.line(pageWidth - margin - 30, y, pageWidth - margin, y);
-      y += 3.5;
-      doc.setFontSize(8);
-      doc.text('Guru Piket', pageWidth - margin - 15, y, { align: 'center' });
-
-      // Trim page height to content
-      const finalHeight = y + 8;
-      doc.internal.pageSize.setHeight(finalHeight);
-
-      // Save
-      const fileName = `izin_${item.siswa?.nama?.replace(/\s+/g, '_') || 'siswa'}_${todayStr}.pdf`;
-      doc.save(fileName);
-
-      setToast({ type: 'success', message: 'PDF berhasil diunduh' });
-    } catch (err) {
-      console.error('PDF generation error:', err);
-      setToast({ type: 'error', message: 'Gagal membuat PDF: ' + err.message });
-    }
+  const handleDownloadPDF = (item) => {
+    setPdfItem(item);
   };
 
-  const handlePrint = (item) => {
-    generateIzinPDF(item);
-  };
+  const jenisLabel = (item) =>
+    item?.jenisIzin === 'masuk' ? 'IZIN MASUK (Telat)' : 'IZIN KELUAR (Pulang)';
+
+  const jenisColor = (item) =>
+    item?.jenisIzin === 'masuk' ? '#1976d2' : '#f57c00';
 
   return (
     <div className="flex flex-col gap-4 p-4">
+      {/* Hidden receipt for html2canvas PDF generation */}
+      {pdfItem && (
+        <div
+          ref={receiptRef}
+          style={{
+            position: 'fixed',
+            top: '-9999px',
+            left: '-9999px',
+            width: '320px',
+            padding: '12px',
+            backgroundColor: '#fff',
+            fontFamily: "'Courier New', 'Consolas', monospace",
+            fontSize: '13px',
+            lineHeight: 1.5,
+            color: '#000',
+            boxSizing: 'border-box'
+          }}
+        >
+          {/* Header */}
+          <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+            <div style={{ fontSize: '15px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              SURAT IZIN SISWA
+            </div>
+            <div style={{ fontSize: '12px', fontWeight: 'bold', marginTop: '2px' }}>
+              SMKN 1 ARAHAN
+            </div>
+            <div style={{ fontSize: '10px', color: '#555', marginTop: '2px' }}>
+              {new Date().toLocaleDateString('id-ID', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+              })}
+            </div>
+          </div>
+
+          <div style={{ borderTop: '2px dashed #000', margin: '6px 0' }} />
+
+          {/* Notice for satpam */}
+          <div style={{
+            textAlign: 'center',
+            backgroundColor: '#fff3cd',
+            border: '1px solid #ffc107',
+            padding: '6px',
+            marginBottom: '8px',
+            fontSize: '11px',
+            fontWeight: 'bold',
+            color: '#856404'
+          }}>
+            TUNJUKKAN SURAT INI KE SATPAM / PENJAGA GERBANG
+          </div>
+
+          {/* Body */}
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <tbody>
+              <tr>
+                <td style={{ fontWeight: 'bold', padding: '2px 4px 2px 0', whiteSpace: 'nowrap', width: '70px' }}>Nama</td>
+                <td style={{ padding: '2px 0' }}>: {pdfItem.siswa?.nama || '-'}</td>
+              </tr>
+              <tr>
+                <td style={{ fontWeight: 'bold', padding: '2px 4px 2px 0' }}>Kelas</td>
+                <td style={{ padding: '2px 0' }}>: {pdfItem.kelas?.nama || '-'}</td>
+              </tr>
+              <tr>
+                <td style={{ fontWeight: 'bold', padding: '2px 4px 2px 0' }}>NIS</td>
+                <td style={{ padding: '2px 0' }}>: {pdfItem.siswa?.nis || '-'}</td>
+              </tr>
+              <tr>
+                <td style={{ fontWeight: 'bold', padding: '2px 4px 2px 0' }}>Jenis Izin</td>
+                <td style={{ padding: '2px 0', fontWeight: 'bold', color: jenisColor(pdfItem), textTransform: 'uppercase' }}>
+                  : {jenisLabel(pdfItem)}
+                </td>
+              </tr>
+              <tr>
+                <td style={{ fontWeight: 'bold', padding: '2px 4px 2px 0' }}>Jam</td>
+                <td style={{ padding: '2px 0', fontWeight: 'bold' }}>: {pdfItem.jam || '-'}</td>
+              </tr>
+              <tr>
+                <td style={{ fontWeight: 'bold', padding: '2px 4px 2px 0', verticalAlign: 'top' }}>Alasan</td>
+                <td style={{ padding: '2px 0', wordBreak: 'break-word' }}>: {pdfItem.alasan || '-'}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div style={{ borderTop: '2px dashed #000', margin: '8px 0' }} />
+
+          {/* Footer */}
+          <div style={{ fontSize: '10px', color: '#333', marginBottom: '4px' }}>
+            <div>Dibuat oleh: {pdfItem.guruPiket?.nama || user?.nama || '-'}</div>
+            <div>
+              Jam cetak: {new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+            </div>
+          </div>
+
+          <div style={{ marginTop: '12px', textAlign: 'center' }}>
+            <div style={{ fontSize: '10px', marginBottom: '4px' }}>Tanda Tangan Guru Piket</div>
+            <div style={{ borderBottom: '1px solid #000', width: '140px', margin: '0 auto', height: '30px' }} />
+            <div style={{ fontSize: '10px', marginTop: '4px' }}>
+              ({pdfItem.guruPiket?.nama || user?.nama || '-'})
+            </div>
+          </div>
+
+          {/* Barcode-like ID for authenticity */}
+          <div style={{ marginTop: '10px', textAlign: 'center', fontSize: '10px', color: '#666' }}>
+            No. Izin: #{String(pdfItem.id).padStart(4, '0')}
+          </div>
+        </div>
+      )}
+
       {/* Toast */}
       {toast && (
         <div style={{
@@ -371,7 +423,7 @@ const IzinSiswaScreen = () => {
 
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
                   <button
-                    onClick={() => handlePrint(item)}
+                    onClick={() => handleDownloadPDF(item)}
                     className="card"
                     style={{
                       flex: 1, padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem',
