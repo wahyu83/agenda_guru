@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppStore } from '../../lib/store';
-import { Plus, Trash2, FileText, Clock, ArrowRight, ArrowLeft, X, Download, Printer } from 'lucide-react';
+import { Plus, Trash2, FileText, Clock, ArrowRight, ArrowLeft, X, Download, Printer, CheckSquare, Square } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -16,7 +16,7 @@ const IzinSiswaScreen = () => {
 
   const [showForm, setShowForm] = useState(false);
   const [selectedKelasId, setSelectedKelasId] = useState('');
-  const [selectedSiswaId, setSelectedSiswaId] = useState('');
+  const [selectedSiswaIds, setSelectedSiswaIds] = useState([]);
   const [jenisIzin, setJenisIzin] = useState('keluar');
   const [jam, setJam] = useState('');
   const [alasan, setAlasan] = useState('');
@@ -92,27 +92,45 @@ const IzinSiswaScreen = () => {
     return siswaKelasAktif || [];
   }, [siswaKelasAktif]);
 
+  const toggleSiswa = (id) => {
+    setSelectedSiswaIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const selectAll = () => {
+    setSelectedSiswaIds(siswaOptions.map((s) => String(s.id)));
+  };
+
+  const deselectAll = () => {
+    setSelectedSiswaIds([]);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedSiswaId || !selectedKelasId || !jam || !alasan) {
-      setToast({ type: 'error', message: 'Semua field wajib diisi' });
+    if (selectedSiswaIds.length === 0 || !selectedKelasId || !jam || !alasan) {
+      setToast({ type: 'error', message: 'Pilih minimal 1 siswa dan isi semua field' });
       return;
     }
     setSaving(true);
     try {
-      await createPermohonanIzin({
-        siswaId: parseInt(selectedSiswaId),
-        kelasId: parseInt(selectedKelasId),
-        jenisIzin,
-        tanggal: todayStr,
-        jam,
-        alasan,
-        guruPiketId: user.id
-      });
-      setToast({ type: 'success', message: 'Permohonan izin berhasil dibuat' });
+      await Promise.all(
+        selectedSiswaIds.map((siswaId) =>
+          createPermohonanIzin({
+            siswaId: parseInt(siswaId),
+            kelasId: parseInt(selectedKelasId),
+            jenisIzin,
+            tanggal: todayStr,
+            jam,
+            alasan,
+            guruPiketId: user.id
+          })
+        )
+      );
+      setToast({ type: 'success', message: `${selectedSiswaIds.length} permohonan izin berhasil dibuat` });
       setShowForm(false);
       setSelectedKelasId('');
-      setSelectedSiswaId('');
+      setSelectedSiswaIds([]);
       setJam('');
       setAlasan('');
     } catch (err) {
@@ -347,7 +365,7 @@ const IzinSiswaScreen = () => {
             <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-muted)' }}>Kelas</label>
             <select
               value={selectedKelasId}
-              onChange={(e) => { setSelectedKelasId(e.target.value); setSelectedSiswaId(''); }}
+              onChange={(e) => { setSelectedKelasId(e.target.value); setSelectedSiswaIds([]); }}
               style={{ padding: '0.6rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', fontSize: '0.9rem' }}
             >
               <option value="">Pilih kelas...</option>
@@ -358,18 +376,83 @@ const IzinSiswaScreen = () => {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-muted)' }}>Siswa</label>
-            <select
-              value={selectedSiswaId}
-              onChange={(e) => setSelectedSiswaId(e.target.value)}
-              disabled={!selectedKelasId}
-              style={{ padding: '0.6rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', fontSize: '0.9rem' }}
-            >
-              <option value="">{selectedKelasId ? 'Pilih siswa...' : 'Pilih kelas dulu'}</option>
-              {siswaOptions.map((s) => (
-                <option key={s.id} value={s.id}>{s.nama} ({s.nis})</option>
-              ))}
-            </select>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-muted)' }}>
+                Siswa
+                {selectedSiswaIds.length > 0 && (
+                  <span style={{ color: 'var(--primary)', marginLeft: '0.35rem' }}>
+                    ({selectedSiswaIds.length} dipilih)
+                  </span>
+                )}
+              </label>
+              {selectedKelasId && siswaOptions.length > 0 && (
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={selectAll}
+                    style={{ fontSize: '0.7rem', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600' }}
+                  >
+                    Pilih Semua
+                  </button>
+                  <button
+                    type="button"
+                    onClick={deselectAll}
+                    style={{ fontSize: '0.7rem', color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600' }}
+                  >
+                    Batal
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {!selectedKelasId ? (
+              <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-color)', color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center' }}>
+                Pilih kelas dulu untuk melihat daftar siswa
+              </div>
+            ) : siswaOptions.length === 0 ? (
+              <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-color)', color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center' }}>
+                Tidak ada siswa di kelas ini
+              </div>
+            ) : (
+              <div
+                className="card"
+                style={{
+                  maxHeight: '220px',
+                  overflowY: 'auto',
+                  padding: '0.5rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.25rem'
+                }}
+              >
+                {siswaOptions.map((s) => {
+                  const isSelected = selectedSiswaIds.includes(String(s.id));
+                  return (
+                    <label
+                      key={s.id}
+                      onClick={() => toggleSiswa(String(s.id))}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.5rem 0.6rem',
+                        borderRadius: 'var(--radius-sm)',
+                        cursor: 'pointer',
+                        backgroundColor: isSelected ? 'var(--primary-light)' : 'transparent',
+                        color: isSelected ? 'var(--primary)' : 'var(--text)',
+                        fontSize: '0.85rem',
+                        fontWeight: isSelected ? '600' : '400',
+                        border: isSelected ? '1px solid var(--primary)' : '1px solid transparent'
+                      }}
+                    >
+                      {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
+                      <span>{s.nama}</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 'auto' }}>{s.nis}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col gap-1">
@@ -435,7 +518,7 @@ const IzinSiswaScreen = () => {
               opacity: saving ? 0.7 : 1
             }}
           >
-            {saving ? 'Menyimpan...' : 'Simpan Permohonan'}
+            {saving ? 'Menyimpan...' : `Simpan (${selectedSiswaIds.length} siswa)`}
           </button>
         </form>
       )}
