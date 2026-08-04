@@ -221,7 +221,6 @@ const IzinSiswaScreen = () => {
                 <th style={{ borderBottom: '1px solid #000', textAlign: 'left', padding: '2px', width: '20px', color: '#000' }}>No</th>
                 <th style={{ borderBottom: '1px solid #000', textAlign: 'left', padding: '2px', color: '#000' }}>Nama</th>
                 <th style={{ borderBottom: '1px solid #000', textAlign: 'left', padding: '2px', color: '#000' }}>Kelas</th>
-                <th style={{ borderBottom: '1px solid #000', textAlign: 'left', padding: '2px', color: '#000' }}>NIS</th>
               </tr>
             </thead>
             <tbody>
@@ -230,7 +229,6 @@ const IzinSiswaScreen = () => {
                   <td style={{ padding: '2px', color: '#000' }}>{idx + 1}</td>
                   <td style={{ padding: '2px', color: '#000' }}>{item.siswa?.nama || '-'}</td>
                   <td style={{ padding: '2px', color: '#000' }}>{item.kelas?.nama || '-'}</td>
-                  <td style={{ padding: '2px', color: '#000' }}>{item.siswa?.nis || '-'}</td>
                 </tr>
               ))}
             </tbody>
