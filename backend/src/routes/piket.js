@@ -4,26 +4,69 @@ const prisma = require('../db');
 
 const HARI = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
-// GET semua pengampu hari ini + status piket
+// Helper: parse YYYY-MM-DD string (or Date) into a UTC Date that represents
+// the same calendar day everywhere, avoiding timezone shift bugs.
+const toUTCDate = (dateInput) => {
+  if (typeof dateInput === 'string' && dateInput.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    const [y, m, d] = dateInput.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d));
+  }
+  if (dateInput instanceof Date) {
+    return new Date(Date.UTC(dateInput.getFullYear(), dateInput.getMonth(), dateInput.getDate()));
+  }
+  return new Date(dateInput);
+};
+
+const todayLocalStr = () => {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+// GET semua pengampu untuk hari tertentu + status piket
 router.get('/jadwal-hari-ini', async (req, res) => {
   try {
+    const { hari: hariParam, tanggal: tanggalParam } = req.query;
+    
     const today = new Date();
     const todayName = HARI[today.getDay()];
-    if (todayName === 'Minggu' || todayName === 'Sabtu') {
+    const targetHari = hariParam && HARI.includes(hariParam) ? hariParam : todayName;
+    const targetDate = toUTCDate(tanggalParam || todayLocalStr());
+    
+    if (targetHari === 'Minggu' || targetHari === 'Sabtu') {
       return res.json([]);
     }
 
+    // Ambil tahun pelajaran aktif untuk memastikan data sesuai tahun ajaran
+    const tahunAktif = await prisma.tahunPelajaran.findFirst({
+      where: { isActive: true }
+    });
+
+    const whereClause = {
+      hari: targetHari,
+      ...(tahunAktif ? {
+        kelas: {
+          tahunPelajaranId: tahunAktif.id
+        }
+      } : {})
+    };
+
     const pengampuList = await prisma.pengampu.findMany({
-      where: { hari: todayName },
+      where: whereClause,
       include: {
         guru: true,
         kelas: true,
         mapel: true,
         piket: {
-          where: { tanggal: new Date(today.toISOString().slice(0, 10)) }
+          where: { tanggal: targetDate }
         }
       },
-      orderBy: { jamKe: 'asc' }
+      orderBy: [
+        { jamKe: 'asc' },
+        { kelas: { nama: 'asc' } }
+      ]
     });
 
     const data = pengampuList.map(p => ({
@@ -47,22 +90,21 @@ router.get('/jadwal-hari-ini', async (req, res) => {
 // POST/UPSERT piket check
 router.post('/', async (req, res) => {
   try {
-    const { pengampuId, piketById, status, catatan } = req.body;
-    const today = new Date();
-    const todayStr = today.toISOString().slice(0, 10);
+    const { pengampuId, piketById, status, catatan, tanggal } = req.body;
+    const targetDate = toUTCDate(tanggal || todayLocalStr());
 
     const data = await prisma.piket.upsert({
       where: {
         pengampuId_tanggal: {
           pengampuId: parseInt(pengampuId),
-          tanggal: new Date(todayStr)
+          tanggal: targetDate
         }
       },
       update: { status, catatan: catatan || null },
       create: {
         pengampuId: parseInt(pengampuId),
         piketById: parseInt(piketById),
-        tanggal: new Date(todayStr),
+        tanggal: targetDate,
         status,
         catatan: catatan || null
       }
@@ -75,14 +117,14 @@ router.post('/', async (req, res) => {
   }
 });
 
-// GET rekap piket hari ini
+// GET rekap piket untuk tanggal tertentu (default hari ini)
 router.get('/rekap-hari-ini', async (req, res) => {
   try {
-    const today = new Date();
-    const todayStr = today.toISOString().slice(0, 10);
+    const { tanggal } = req.query;
+    const targetDate = toUTCDate(tanggal || todayLocalStr());
 
     const data = await prisma.piket.findMany({
-      where: { tanggal: new Date(todayStr) },
+      where: { tanggal: targetDate },
       include: {
         pengampu: {
           include: { guru: true, kelas: true, mapel: true }

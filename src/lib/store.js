@@ -1,10 +1,6 @@
 import { create } from 'zustand';
 
-export const API_BASE = window.location.hostname === 'localhost' 
-  ? 'http://localhost:3000/api' 
-  : '/api';
-
-
+export const API_BASE = '/api';
 
 export const useAppStore = create((set, get) => ({
   tahunPelajaran: [],
@@ -625,8 +621,14 @@ export const useAppStore = create((set, get) => ({
   // --- PIKET ---
   jadwalPiket: [],
 
-  fetchJadwalPiket: async () => {
-    const res = await fetch(`${API_BASE}/piket/jadwal-hari-ini`);
+  fetchJadwalPiket: async (hari = '', tanggal = '') => {
+    let url = `${API_BASE}/piket/jadwal-hari-ini`;
+    const params = new URLSearchParams();
+    if (hari) params.append('hari', hari);
+    if (tanggal) params.append('tanggal', tanggal);
+    if (params.toString()) url += `?${params.toString()}`;
+    
+    const res = await fetch(url);
     const data = await res.json();
     set({ jadwalPiket: data });
   },
