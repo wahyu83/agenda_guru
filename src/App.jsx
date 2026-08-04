@@ -34,6 +34,7 @@ import RencanaScreen from './features/guru/pages/RencanaScreen';
 // Piket
 import PiketLayout from './features/piket/PiketLayout';
 import PiketScreen from './features/piket/PiketScreen';
+import IzinSiswaScreen from './features/piket/IzinSiswaScreen';
 
 function App() {
   const fetchMasterData = useAppStore((state) => state.fetchMasterData);
@@ -80,6 +81,7 @@ function App() {
         {/* Piket Routes */}
         <Route path="/piket" element={<PiketLayout />}>
           <Route index element={<PiketScreen />} />
+          <Route path="izin-siswa" element={<IzinSiswaScreen />} />
         </Route>
 
         {/* Catch all */}

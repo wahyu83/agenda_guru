@@ -8,17 +8,18 @@ datasource db {
 }
 
 model User {
-  id        Int        @id @default(autoincrement())
-  username  String     @unique
+  id        Int                @id @default(autoincrement())
+  username  String             @unique
   password  String
   role      String
   nama      String
   nip       String?
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
   pengampu  Pengampu[]
-  kelasWali Kelas[]    @relation("WaliKelas")
+  kelasWali Kelas[]            @relation("WaliKelas")
   piket     Piket[]
+  izin      PermohonanIzin[]
 }
 
 model TahunPelajaran {
@@ -36,23 +37,25 @@ model MataPelajaran {
 }
 
 model Kelas {
-  id               Int            @id @default(autoincrement())
+  id               Int                @id @default(autoincrement())
   nama             String
   tahunPelajaranId Int
   waliKelasId      Int?
   enrollment       Enrollment[]
-  tahunPelajaran   TahunPelajaran @relation(fields: [tahunPelajaranId], references: [id])
+  tahunPelajaran   TahunPelajaran     @relation(fields: [tahunPelajaranId], references: [id])
   pengampu         Pengampu[]
-  waliKelas        User?          @relation("WaliKelas", fields: [waliKelasId], references: [id])
+  waliKelas        User?              @relation("WaliKelas", fields: [waliKelasId], references: [id])
+  izin             PermohonanIzin[]
 }
 
 model Siswa {
-  id         Int            @id @default(autoincrement())
-  nis        String         @unique
+  id         Int                @id @default(autoincrement())
+  nis        String             @unique
   nama       String
   absensi    AbsensiSiswa[]
   enrollment Enrollment[]
   nilai      Nilai[]
+  izin       PermohonanIzin[]
 }
 
 model Enrollment {
@@ -146,6 +149,23 @@ model JamPelajaran {
   jamKe   Int    @unique
   mulai   String
   selesai String
+}
+
+model PermohonanIzin {
+  id            Int      @id @default(autoincrement())
+  siswaId       Int
+  kelasId       Int
+  jenisIzin     String   // "masuk" | "keluar"
+  tanggal       DateTime @db.Date
+  jam           String   // jam saat izin (misal 08:30 atau 13:00)
+  alasan        String   @db.Text
+  guruPiketId   Int
+  status        String   @default("diajukan") // "diajukan" | "disetujui" | "ditolak"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  siswa         Siswa    @relation(fields: [siswaId], references: [id], onDelete: Cascade)
+  kelas         Kelas    @relation(fields: [kelasId], references: [id], onDelete: Cascade)
+  guruPiket     User     @relation(fields: [guruPiketId], references: [id], onDelete: Cascade)
 }
 
 model Piket {

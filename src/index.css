@@ -279,3 +279,99 @@ body {
 .nav-item:hover {
   color: var(--primary-hover);
 }
+
+/* ===== THERMAL PRINTER (80mm) ===== */
+.thermal-print {
+  display: none;
+  font-family: 'Courier New', monospace;
+  width: 80mm;
+  max-width: 80mm;
+  padding: 4mm;
+  box-sizing: border-box;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #000;
+}
+
+.thermal-header {
+  text-align: center;
+  margin-bottom: 4mm;
+}
+
+.thermal-header h3 {
+  font-size: 14px;
+  font-weight: bold;
+  margin: 0 0 2mm 0;
+  text-transform: uppercase;
+}
+
+.thermal-header p {
+  margin: 0;
+  font-size: 11px;
+}
+
+.thermal-divider {
+  border-top: 1px dashed #000;
+  margin: 3mm 0;
+}
+
+.thermal-body {
+  margin-bottom: 4mm;
+}
+
+.thermal-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2mm;
+  flex-wrap: wrap;
+}
+
+.thermal-label {
+  font-weight: bold;
+  flex-shrink: 0;
+  margin-right: 2mm;
+}
+
+.thermal-value {
+  text-align: right;
+  flex: 1;
+  word-break: break-word;
+}
+
+.thermal-footer {
+  text-align: center;
+  margin-top: 4mm;
+  font-size: 11px;
+}
+
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .thermal-print,
+  .thermal-print * {
+    visibility: visible;
+  }
+
+  .thermal-print {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    background: white;
+  }
+
+  .mobile-layout,
+  .mobile-header,
+  .bottom-nav,
+  .mobile-content {
+    display: none !important;
+  }
+}

@@ -641,5 +641,54 @@ export const useAppStore = create((set, get) => ({
     });
     if (!res.ok) throw new Error('Gagal menyimpan piket');
     return await res.json();
+  },
+
+  // --- IZIN SISWA ---
+  permohonanIzin: [],
+
+  fetchPermohonanIzin: async (tanggal = '', kelasId = '') => {
+    let url = `${API_BASE}/izin`;
+    const params = new URLSearchParams();
+    if (tanggal) params.append('tanggal', tanggal);
+    if (kelasId) params.append('kelasId', kelasId);
+    if (params.toString()) url += `?${params.toString()}`;
+    
+    const res = await fetch(url);
+    const data = await res.json();
+    set({ permohonanIzin: data });
+  },
+
+  createPermohonanIzin: async (data) => {
+    const res = await fetch(`${API_BASE}/izin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Gagal membuat permohonan izin');
+    const newData = await res.json();
+    set((state) => ({ permohonanIzin: [newData, ...state.permohonanIzin] }));
+    return newData;
+  },
+
+  updatePermohonanIzin: async (id, data) => {
+    const res = await fetch(`${API_BASE}/izin/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Gagal mengupdate permohonan izin');
+    const updated = await res.json();
+    set((state) => ({
+      permohonanIzin: state.permohonanIzin.map((item) => item.id === id ? updated : item)
+    }));
+    return updated;
+  },
+
+  deletePermohonanIzin: async (id) => {
+    const res = await fetch(`${API_BASE}/izin/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Gagal menghapus permohonan izin');
+    set((state) => ({
+      permohonanIzin: state.permohonanIzin.filter((item) => item.id !== id)
+    }));
   }
 }));

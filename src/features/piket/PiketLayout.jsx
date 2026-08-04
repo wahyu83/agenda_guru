@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
-import { UserCog } from 'lucide-react';
+import { Outlet, useNavigate, useLocation, NavLink } from 'react-router-dom';
+import { UserCog, ClipboardList, FileText } from 'lucide-react';
 import { useAppStore } from '../../lib/store';
 import ProfileModal from '../../components/ProfileModal';
 
 const PiketLayout = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAppStore();
   const [showProfile, setShowProfile] = useState(false);
 
@@ -14,6 +15,8 @@ const PiketLayout = () => {
       navigate('/login', { replace: true });
     }
   }, [user, navigate]);
+
+  const isActive = (path) => location.pathname === path;
 
   return (
     <div className="mobile-layout">
@@ -36,6 +39,17 @@ const PiketLayout = () => {
       <main className="mobile-content animate-fade-in">
         <Outlet />
       </main>
+
+      <nav className="bottom-nav">
+        <NavLink to="/piket" className={isActive('/piket') ? 'nav-item active' : 'nav-item'}>
+          <ClipboardList size={22} />
+          <span>Pantauan</span>
+        </NavLink>
+        <NavLink to="/piket/izin-siswa" className={isActive('/piket/izin-siswa') ? 'nav-item active' : 'nav-item'}>
+          <FileText size={22} />
+          <span>Izin Siswa</span>
+        </NavLink>
+      </nav>
 
       {showProfile && user && (
         <ProfileModal user={user} onClose={() => setShowProfile(false)} />

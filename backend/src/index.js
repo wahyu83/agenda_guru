@@ -14,11 +14,13 @@ const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const guruRoutes = require('./routes/guru');
 const piketRoutes = require('./routes/piket');
+const izinRoutes = require('./routes/izin');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/guru', guruRoutes);
 app.use('/api/piket', piketRoutes);
+app.use('/api/izin', izinRoutes);
 
 app.get('/', (req, res) => {
   res.send('Agenda guru SMKN 1 Arahan API is running');
