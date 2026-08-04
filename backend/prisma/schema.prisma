@@ -161,6 +161,7 @@ model PermohonanIzin {
   alasan        String   @db.Text
   guruPiketId   Int
   status        String   @default("diajukan") // "diajukan" | "disetujui" | "ditolak"
+  batchId       String?  // untuk grup siswa dari 1 form yang sama
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   siswa         Siswa    @relation(fields: [siswaId], references: [id], onDelete: Cascade)

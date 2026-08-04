@@ -11,6 +11,25 @@ const formatDateISO = (date) => {
   return `${year}-${month}-${day}`;
 };
 
+// Group by batchId. Items with null batchId become individual groups.
+const groupByBatch = (items) => {
+  const groups = {};
+  items.forEach((item) => {
+    const key = item.batchId || `single-${item.id}`;
+    if (!groups[key]) {
+      groups[key] = {
+        batchId: item.batchId,
+        items: [],
+        shared: item // use first item for shared fields
+      };
+    }
+    groups[key].items.push(item);
+  });
+  return Object.values(groups).sort((a, b) =>
+    new Date(b.shared.createdAt) - new Date(a.shared.createdAt)
+  );
+};
+
 const IzinSiswaScreen = () => {
   const { user, kelas, siswaKelasAktif, permohonanIzin, fetchSiswaKelas, fetchPermohonanIzin, createPermohonanIzinBatch, deletePermohonanIzin } = useAppStore();
 
@@ -22,8 +41,7 @@ const IzinSiswaScreen = () => {
   const [alasan, setAlasan] = useState('');
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
-  const [pdfItem, setPdfItem] = useState(null);
-  const [printItem, setPrintItem] = useState(null);
+  const [printGroup, setPrintGroup] = useState(null);
   const receiptRef = useRef(null);
 
   const todayStr = formatDateISO(new Date());
@@ -45,9 +63,9 @@ const IzinSiswaScreen = () => {
     }
   }, [toast]);
 
-  // Auto-generate PDF when pdfItem changes
+  // Auto-generate PDF when printGroup changes
   useEffect(() => {
-    if (!pdfItem || !receiptRef.current) return;
+    if (!printGroup || !receiptRef.current) return;
     const generate = async () => {
       try {
         await new Promise((r) => setTimeout(r, 100));
@@ -61,20 +79,21 @@ const IzinSiswaScreen = () => {
         const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
         const doc = new jsPDF({ unit: 'mm', format: [pdfWidth, pdfHeight], orientation: 'portrait' });
         doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        const fileName = `izin_${pdfItem.siswa?.nama?.replace(/\s+/g, '_') || 'siswa'}_${todayStr}.pdf`;
+        const fileName = `izin_group_${printGroup.shared.tanggal || todayStr}.pdf`;
         doc.save(fileName);
         setToast({ type: 'success', message: 'PDF berhasil diunduh' });
-        setPdfItem(null);
+        setPrintGroup(null);
       } catch (err) {
-        console.error('PDF generation error:', err);
+        console.error('PDF error:', err);
         setToast({ type: 'error', message: 'Gagal membuat PDF: ' + err.message });
-        setPdfItem(null);
+        setPrintGroup(null);
       }
     };
     generate();
-  }, [pdfItem, todayStr]);
+  }, [printGroup, todayStr]);
 
   const siswaOptions = useMemo(() => siswaKelasAktif || [], [siswaKelasAktif]);
+  const groupedIzin = useMemo(() => groupByBatch(permohonanIzin), [permohonanIzin]);
 
   const currentKelasNama = useMemo(() => {
     const k = kelas.find((c) => String(c.id) === viewKelasId);
@@ -85,16 +104,11 @@ const IzinSiswaScreen = () => {
 
   const toggleSiswa = (s) => {
     const id = String(s.id);
-    console.log('[toggleSiswa] clicked id:', id, 'current selected:', selectedStudents);
     setSelectedStudents((prev) => {
       if (prev.some((x) => String(x.siswaId) === id)) {
-        const next = prev.filter((x) => String(x.siswaId) !== id);
-        console.log('[toggleSiswa] removed, next count:', next.length);
-        return next;
+        return prev.filter((x) => String(x.siswaId) !== id);
       }
-      const next = [...prev, { siswaId: id, kelasId: viewKelasId, nama: s.nama, nis: s.nis, kelasNama: currentKelasNama }];
-      console.log('[toggleSiswa] added, next count:', next.length);
-      return next;
+      return [...prev, { siswaId: id, kelasId: viewKelasId, nama: s.nama, nis: s.nis, kelasNama: currentKelasNama }];
     });
   };
 
@@ -117,7 +131,6 @@ const IzinSiswaScreen = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('[handleSubmit] selectedStudents:', selectedStudents.length, 'jam:', jam, 'alasan:', alasan, 'user:', user);
     if (selectedStudents.length === 0 || !jam || !alasan) {
       setToast({ type: 'error', message: 'Pilih minimal 1 siswa dan isi semua field' });
       return;
@@ -128,14 +141,15 @@ const IzinSiswaScreen = () => {
     }
     setSaving(true);
     try {
-      console.log('[handleSubmit] calling batch API with', selectedStudents.length, 'students');
+      const batchId = `GRP-${Date.now()}`;
       await createPermohonanIzinBatch({
         items: selectedStudents.map((s) => ({ siswaId: s.siswaId, kelasId: s.kelasId })),
         tanggal: todayStr,
         jenisIzin,
         jam,
         alasan,
-        guruPiketId: user.id
+        guruPiketId: user.id,
+        batchId
       });
       setToast({ type: 'success', message: `${selectedStudents.length} permohonan izin berhasil dibuat` });
       setShowForm(false);
@@ -144,7 +158,7 @@ const IzinSiswaScreen = () => {
       setJam('');
       setAlasan('');
     } catch (err) {
-      console.error('[handleSubmit] error:', err);
+      console.error('Submit error:', err);
       setToast({ type: 'error', message: err.message || 'Gagal menyimpan' });
     } finally {
       setSaving(false);
@@ -161,19 +175,22 @@ const IzinSiswaScreen = () => {
     }
   };
 
-  const handleDownloadPDF = (item) => setPdfItem(item);
+  const handleDownloadPDF = (group) => setPrintGroup(group);
 
-  const handleDirectPrint = (item) => {
-    setPrintItem(item);
-    setTimeout(() => { window.print(); setPrintItem(null); }, 400);
+  const handleDirectPrint = (group) => {
+    setPrintGroup(group);
+    setTimeout(() => {
+      window.print();
+      setPrintGroup(null);
+    }, 400);
   };
 
-  const jenisLabel = (item) => item?.jenisIzin === 'masuk' ? 'IZIN MASUK' : 'IZIN KELUAR';
+  const jenisLabel = (izin) => izin?.jenisIzin === 'masuk' ? 'IZIN MASUK' : 'IZIN KELUAR';
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      {/* Hidden receipt for html2canvas PDF */}
-      {pdfItem && (
+      {/* Hidden receipt for html2canvas PDF / print */}
+      {printGroup && (
         <div ref={receiptRef} style={{ position: 'fixed', top: '-9999px', left: '-9999px', width: '320px', padding: '12px', backgroundColor: '#fff', fontFamily: "'Courier New', 'Consolas', monospace", fontSize: '13px', lineHeight: 1.5, color: '#000', boxSizing: 'border-box' }}>
           <div style={{ textAlign: 'center', marginBottom: '8px' }}>
             <div style={{ fontSize: '15px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', color: '#000' }}>SURAT IZIN SISWA</div>
@@ -186,61 +203,52 @@ const IzinSiswaScreen = () => {
           <div style={{ textAlign: 'center', border: '2px solid #000', padding: '6px', marginBottom: '8px', fontSize: '11px', fontWeight: 'bold', color: '#000' }}>
             TUNJUKKAN SURAT INI KE SATPAM / PENJAGA GERBANG
           </div>
+
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <tbody>
-              <tr><td style={{ fontWeight: 'bold', padding: '2px 4px 2px 0', whiteSpace: 'nowrap', width: '70px', color: '#000' }}>Nama</td><td style={{ padding: '2px 0', color: '#000' }}>: {pdfItem.siswa?.nama || '-'}</td></tr>
-              <tr><td style={{ fontWeight: 'bold', padding: '2px 4px 2px 0', color: '#000' }}>Kelas</td><td style={{ padding: '2px 0', color: '#000' }}>: {pdfItem.kelas?.nama || '-'}</td></tr>
-              <tr><td style={{ fontWeight: 'bold', padding: '2px 4px 2px 0', color: '#000' }}>NIS</td><td style={{ padding: '2px 0', color: '#000' }}>: {pdfItem.siswa?.nis || '-'}</td></tr>
-              <tr><td style={{ fontWeight: 'bold', padding: '2px 4px 2px 0', color: '#000' }}>Jenis Izin</td><td style={{ padding: '2px 0', fontWeight: 'bold', color: '#000', textTransform: 'uppercase' }}>: {jenisLabel(pdfItem)}</td></tr>
-              <tr><td style={{ fontWeight: 'bold', padding: '2px 4px 2px 0', color: '#000' }}>Jam</td><td style={{ padding: '2px 0', fontWeight: 'bold', color: '#000' }}>: {pdfItem.jam || '-'}</td></tr>
-              <tr><td style={{ fontWeight: 'bold', padding: '2px 4px 2px 0', verticalAlign: 'top', color: '#000' }}>Alasan</td><td style={{ padding: '2px 0', wordBreak: 'break-word', color: '#000' }}>: {pdfItem.alasan || '-'}</td></tr>
+              <tr><td style={{ fontWeight: 'bold', padding: '2px 4px 2px 0', whiteSpace: 'nowrap', width: '70px', color: '#000' }}>Jenis Izin</td><td style={{ padding: '2px 0', fontWeight: 'bold', color: '#000', textTransform: 'uppercase' }}>: {jenisLabel(printGroup.shared)}</td></tr>
+              <tr><td style={{ fontWeight: 'bold', padding: '2px 4px 2px 0', color: '#000' }}>Jam</td><td style={{ padding: '2px 0', fontWeight: 'bold', color: '#000' }}>: {printGroup.shared.jam || '-'}</td></tr>
+              <tr><td style={{ fontWeight: 'bold', padding: '2px 4px 2px 0', verticalAlign: 'top', color: '#000' }}>Alasan</td><td style={{ padding: '2px 0', wordBreak: 'break-word', color: '#000' }}>: {printGroup.shared.alasan || '-'}</td></tr>
             </tbody>
           </table>
+
+          <div style={{ borderTop: '2px dashed #000', margin: '6px 0' }} />
+
+          <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '4px', color: '#000' }}>Daftar Siswa:</div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+            <thead>
+              <tr>
+                <th style={{ borderBottom: '1px solid #000', textAlign: 'left', padding: '2px', width: '20px', color: '#000' }}>No</th>
+                <th style={{ borderBottom: '1px solid #000', textAlign: 'left', padding: '2px', color: '#000' }}>Nama</th>
+                <th style={{ borderBottom: '1px solid #000', textAlign: 'left', padding: '2px', color: '#000' }}>Kelas</th>
+                <th style={{ borderBottom: '1px solid #000', textAlign: 'left', padding: '2px', color: '#000' }}>NIS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {printGroup.items.map((item, idx) => (
+                <tr key={item.id}>
+                  <td style={{ padding: '2px', color: '#000' }}>{idx + 1}</td>
+                  <td style={{ padding: '2px', color: '#000' }}>{item.siswa?.nama || '-'}</td>
+                  <td style={{ padding: '2px', color: '#000' }}>{item.kelas?.nama || '-'}</td>
+                  <td style={{ padding: '2px', color: '#000' }}>{item.siswa?.nis || '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
           <div style={{ borderTop: '2px dashed #000', margin: '8px 0' }} />
           <div style={{ fontSize: '10px', marginBottom: '4px', color: '#000' }}>
-            <div>Dibuat oleh: {pdfItem.guruPiket?.nama || user?.nama || '-'}</div>
+            <div>Dibuat oleh: {printGroup.shared.guruPiket?.nama || user?.nama || '-'}</div>
             <div>Jam cetak: {new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</div>
           </div>
           <div style={{ marginTop: '12px', textAlign: 'center' }}>
             <div style={{ fontSize: '10px', marginBottom: '4px', color: '#000' }}>Tanda Tangan Guru Piket</div>
             <div style={{ borderBottom: '1px solid #000', width: '140px', margin: '0 auto', height: '30px' }} />
-            <div style={{ fontSize: '10px', marginTop: '4px', color: '#000' }}>({pdfItem.guruPiket?.nama || user?.nama || '-'})</div>
+            <div style={{ fontSize: '10px', marginTop: '4px', color: '#000' }}>({printGroup.shared.guruPiket?.nama || user?.nama || '-'})</div>
           </div>
-          <div style={{ marginTop: '10px', textAlign: 'center', fontSize: '10px', color: '#000' }}>No. Izin: #{String(pdfItem.id).padStart(4, '0')}</div>
-        </div>
-      )}
-
-      {/* Print-only receipt for direct thermal print */}
-      {printItem && (
-        <div className="print-only-receipt">
-          <div className="print-header">
-            <div className="print-title">SURAT IZIN SISWA</div>
-            <div className="print-school">SMKN 1 ARAHAN</div>
-            <div className="print-date">{new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+          <div style={{ marginTop: '10px', textAlign: 'center', fontSize: '10px', color: '#000' }}>
+            No. Izin Grup: {printGroup.batchId || `#${String(printGroup.shared.id).padStart(4, '0')}`}
           </div>
-          <div className="print-divider" />
-          <div className="print-notice">TUNJUKKAN SURAT INI KE SATPAM / PENJAGA GERBANG</div>
-          <table className="print-table">
-            <tbody>
-              <tr><td className="print-label">Nama</td><td className="print-value">: {printItem.siswa?.nama || '-'}</td></tr>
-              <tr><td className="print-label">Kelas</td><td className="print-value">: {printItem.kelas?.nama || '-'}</td></tr>
-              <tr><td className="print-label">NIS</td><td className="print-value">: {printItem.siswa?.nis || '-'}</td></tr>
-              <tr><td className="print-label">Jenis Izin</td><td className="print-value print-bold">: {jenisLabel(printItem)}</td></tr>
-              <tr><td className="print-label">Jam</td><td className="print-value print-bold">: {printItem.jam || '-'}</td></tr>
-              <tr><td className="print-label" style={{ verticalAlign: 'top' }}>Alasan</td><td className="print-value">: {printItem.alasan || '-'}</td></tr>
-            </tbody>
-          </table>
-          <div className="print-divider" />
-          <div className="print-meta">
-            <div>Dibuat oleh: {printItem.guruPiket?.nama || user?.nama || '-'}</div>
-            <div>Jam cetak: {new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</div>
-          </div>
-          <div className="print-signature">
-            <div className="print-sig-label">Tanda Tangan Guru Piket</div>
-            <div className="print-sig-line" />
-            <div className="print-sig-name">({printItem.guruPiket?.nama || user?.nama || '-'})</div>
-          </div>
-          <div className="print-id">No. Izin: #{String(printItem.id).padStart(4, '0')}</div>
         </div>
       )}
 
@@ -261,16 +269,13 @@ const IzinSiswaScreen = () => {
 
       {showForm && (
         <form onSubmit={handleSubmit} className="card flex flex-col gap-3" style={{ padding: '1rem' }}>
-          {/* Selected students summary */}
           {selectedStudents.length > 0 && (
             <div style={{ backgroundColor: 'var(--primary-light)', borderRadius: 'var(--radius-md)', padding: '0.75rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                 <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--primary)' }}>
                   Siswa Terpilih ({selectedStudents.length})
                 </span>
-                <button type="button" onClick={clearAll} style={{ fontSize: '0.7rem', color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600' }}>
-                  Hapus Semua
-                </button>
+                <button type="button" onClick={clearAll} style={{ fontSize: '0.7rem', color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600' }}>Hapus Semua</button>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
                 {selectedStudents.map((s) => (
@@ -285,14 +290,9 @@ const IzinSiswaScreen = () => {
             </div>
           )}
 
-          {/* Kelas selector */}
           <div className="flex flex-col gap-1">
             <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-muted)' }}>Pilih Kelas</label>
-            <select
-              value={viewKelasId}
-              onChange={(e) => setViewKelasId(e.target.value)}
-              style={{ padding: '0.6rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', fontSize: '0.9rem' }}
-            >
+            <select value={viewKelasId} onChange={(e) => setViewKelasId(e.target.value)} style={{ padding: '0.6rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', fontSize: '0.9rem' }}>
               <option value="">Pilih kelas untuk melihat siswa...</option>
               {kelas.map((k) => (
                 <option key={k.id} value={k.id}>{k.nama}</option>
@@ -300,7 +300,6 @@ const IzinSiswaScreen = () => {
             </select>
           </div>
 
-          {/* Student checklist for current kelas */}
           <div className="flex flex-col gap-1">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-muted)' }}>
@@ -313,32 +312,16 @@ const IzinSiswaScreen = () => {
                 </div>
               )}
             </div>
-
             {!viewKelasId ? (
-              <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-color)', color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center' }}>
-                Pilih kelas untuk melihat daftar siswa
-              </div>
+              <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-color)', color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center' }}>Pilih kelas untuk melihat daftar siswa</div>
             ) : siswaOptions.length === 0 ? (
-              <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-color)', color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center' }}>
-                Tidak ada siswa di kelas ini
-              </div>
+              <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-color)', color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center' }}>Tidak ada siswa di kelas ini</div>
             ) : (
               <div className="card" style={{ maxHeight: '220px', overflowY: 'auto', padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                 {siswaOptions.map((s) => {
                   const checked = isSelected(s.id);
                   return (
-                    <div
-                      key={s.id}
-                      onClick={() => toggleSiswa(s)}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: '0.5rem',
-                        padding: '0.5rem 0.6rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
-                        backgroundColor: checked ? 'var(--primary-light)' : 'transparent',
-                        color: checked ? 'var(--primary)' : 'var(--text)',
-                        fontSize: '0.85rem', fontWeight: checked ? '600' : '400',
-                        border: checked ? '1px solid var(--primary)' : '1px solid transparent'
-                      }}
-                    >
+                    <div key={s.id} onClick={() => toggleSiswa(s)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.6rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer', backgroundColor: checked ? 'var(--primary-light)' : 'transparent', color: checked ? 'var(--primary)' : 'var(--text)', fontSize: '0.85rem', fontWeight: checked ? '600' : '400', border: checked ? '1px solid var(--primary)' : '1px solid transparent' }}>
                       {checked ? <CheckSquare size={18} /> : <Square size={18} />}
                       <span>{s.nama}</span>
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 'auto' }}>{s.nis}</span>
@@ -379,35 +362,103 @@ const IzinSiswaScreen = () => {
 
       <div>
         <h2 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.75rem' }}>Daftar Izin Hari Ini</h2>
-        {permohonanIzin.length === 0 ? (
+        {groupedIzin.length === 0 ? (
           <div className="card" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
             <FileText size={48} style={{ margin: '0 auto 1rem', opacity: 0.3 }} />
             <p style={{ fontWeight: '500' }}>Belum ada permohonan izin hari ini</p>
             <p style={{ fontSize: '0.8rem', marginTop: '0.25rem' }}>Klik "Buat Izin" untuk menambahkan</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-2">
-            {permohonanIzin.map((item) => (
-              <div key={item.id} className="card" style={{ padding: '0.75rem 1rem', borderLeft: `4px solid ${item.jenisIzin === 'masuk' ? 'var(--primary)' : 'var(--warning)'}`, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontWeight: '600', fontSize: '0.9rem' }}>{item.siswa?.nama}</p>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{item.kelas?.nama} &middot; NIS: {item.siswa?.nis}</p>
+          <div className="flex flex-col gap-3">
+            {groupedIzin.map((group) => {
+              const isBatch = group.items.length > 1;
+              return (
+                <div key={group.batchId || group.shared.id} className="card" style={{
+                  padding: '0.75rem 1rem',
+                  borderLeft: `4px solid ${group.shared.jenisIzin === 'masuk' ? 'var(--primary)' : 'var(--warning)'}`,
+                  display: 'flex', flexDirection: 'column', gap: '0.5rem'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{
+                        padding: '0.25rem 0.5rem', borderRadius: 'var(--radius-md)', fontSize: '0.7rem', fontWeight: '700',
+                        backgroundColor: group.shared.jenisIzin === 'masuk' ? 'var(--primary-light)' : 'var(--warning-light, #FFF3E0)',
+                        color: group.shared.jenisIzin === 'masuk' ? 'var(--primary)' : 'var(--warning)',
+                        textTransform: 'uppercase'
+                      }}>
+                        {jenisLabel(group.shared)}
+                      </span>
+                      {isBatch && (
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '600' }}>
+                          Grup ({group.items.length} siswa)
+                        </span>
+                      )}
+                    </div>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                      {group.shared.jam}
+                    </span>
                   </div>
-                  <div style={{ padding: '0.25rem 0.5rem', borderRadius: 'var(--radius-md)', fontSize: '0.7rem', fontWeight: '700', backgroundColor: item.jenisIzin === 'masuk' ? 'var(--primary-light)' : 'var(--warning-light, #FFF3E0)', color: item.jenisIzin === 'masuk' ? 'var(--primary)' : 'var(--warning)', textTransform: 'uppercase', flexShrink: 0 }}>
-                    {item.jenisIzin === 'masuk' ? 'IZIN MASUK' : 'IZIN KELUAR'}
+
+                  {/* Student list inside group */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    {group.items.map((item) => (
+                      <div key={item.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.35rem 0' }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <span style={{ fontWeight: '600', fontSize: '0.85rem' }}>{item.siswa?.nama}</span>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '0.5rem' }}>{item.kelas?.nama} &middot; {item.siswa?.nis}</span>
+                        </div>
+                        {!isBatch && (
+                          <button
+                            onClick={() => handleDelete(item.id)}
+                            style={{ padding: '0.25rem', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)' }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text)' }}>
+                    <span style={{ fontWeight: '600' }}>Alasan: </span>{group.shared.alasan}
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                    Oleh: {group.shared.guruPiket?.nama} &middot; {new Date(group.shared.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                    <button
+                      onClick={() => handleDirectPrint(group)}
+                      className="card"
+                      style={{ flex: 1, padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600', backgroundColor: '#000', color: '#fff' }}
+                    >
+                      <Printer size={14} /> Cetak Thermal
+                    </button>
+                    <button
+                      onClick={() => handleDownloadPDF(group)}
+                      className="card"
+                      style={{ flex: 1, padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600', backgroundColor: 'var(--surface-hover)', color: 'var(--primary)' }}
+                    >
+                      <Download size={14} /> Download PDF
+                    </button>
+                    {isBatch && (
+                      <button
+                        onClick={async () => {
+                          if (!confirm(`Yakin ingin menghapus grup izin ini (${group.items.length} siswa)?`)) return;
+                          for (const item of group.items) {
+                            await deletePermohonanIzin(item.id);
+                          }
+                          setToast({ type: 'success', message: 'Grup berhasil dihapus' });
+                        }}
+                        style={{ padding: '0.5rem 0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer', backgroundColor: 'var(--danger-light, #FFEBEE)', color: 'var(--danger)' }}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}><Clock size={14} /> Jam: {item.jam}</div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text)' }}><span style={{ fontWeight: '600' }}>Alasan: </span>{item.alasan}</div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Oleh: {item.guruPiket?.nama} &middot; {new Date(item.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</div>
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
-                  <button onClick={() => handleDirectPrint(item)} className="card" style={{ flex: 1, padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600', backgroundColor: '#000', color: '#fff' }}><Printer size={14} /> Cetak Thermal</button>
-                  <button onClick={() => handleDownloadPDF(item)} className="card" style={{ flex: 1, padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600', backgroundColor: 'var(--surface-hover)', color: 'var(--primary)' }}><Download size={14} /> Download PDF</button>
-                  <button onClick={() => handleDelete(item.id)} style={{ padding: '0.5rem 0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer', backgroundColor: 'var(--danger-light, #FFEBEE)', color: 'var(--danger)' }}><Trash2 size={16} /></button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

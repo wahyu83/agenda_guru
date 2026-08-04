@@ -130,13 +130,14 @@ router.delete('/:id', async (req, res) => {
 // POST batch permohonan izin (multiple students at once)
 router.post('/batch', async (req, res) => {
   try {
-    const { items, tanggal, jenisIzin, jam, alasan, guruPiketId } = req.body;
+    const { items, tanggal, jenisIzin, jam, alasan, guruPiketId, batchId } = req.body;
 
     if (!Array.isArray(items) || items.length === 0 || !jenisIzin || !jam || !alasan || !guruPiketId) {
       return res.status(400).json({ error: 'Data tidak lengkap' });
     }
 
     const targetDate = tanggal ? toUTCDate(tanggal) : toUTCDate(todayLocalStr());
+    const bid = batchId || `GRP-${Date.now()}`;
 
     const created = await prisma.$transaction(
       items.map((item) =>
@@ -149,7 +150,8 @@ router.post('/batch', async (req, res) => {
             jam,
             alasan,
             guruPiketId: parseInt(guruPiketId),
-            status: 'diajukan'
+            status: 'diajukan',
+            batchId: bid
           },
           include: {
             siswa: true,
@@ -164,6 +166,26 @@ router.post('/batch', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Gagal membuat batch permohonan izin' });
+  }
+});
+
+// GET group detail by batchId
+router.get('/group/:batchId', async (req, res) => {
+  try {
+    const { batchId } = req.params;
+    const data = await prisma.permohonanIzin.findMany({
+      where: { batchId },
+      include: {
+        siswa: true,
+        kelas: true,
+        guruPiket: { select: { id: true, nama: true } }
+      },
+      orderBy: { id: 'asc' }
+    });
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal mengambil grup izin' });
   }
 });
 

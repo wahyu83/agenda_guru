@@ -682,6 +682,12 @@ export const useAppStore = create((set, get) => ({
     return newData;
   },
 
+  fetchIzinGroup: async (batchId) => {
+    const res = await fetch(`${API_BASE}/izin/group/${batchId}`);
+    if (!res.ok) throw new Error('Gagal mengambil grup izin');
+    return await res.json();
+  },
+
   updatePermohonanIzin: async (id, data) => {
     const res = await fetch(`${API_BASE}/izin/${id}`, {
       method: 'PUT',
