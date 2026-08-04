@@ -280,68 +280,119 @@ body {
   color: var(--primary-hover);
 }
 
-/* ===== THERMAL PRINTER (80mm) ===== */
-.thermal-print {
+/* ===== THERMAL PRINTER (80mm) - Print Only Receipt ===== */
+.print-only-receipt {
   display: none;
-  font-family: 'Courier New', monospace;
+  font-family: 'Courier New', 'Consolas', monospace;
   width: 80mm;
   max-width: 80mm;
   padding: 4mm;
   box-sizing: border-box;
   font-size: 12px;
-  line-height: 1.4;
+  line-height: 1.5;
+  color: #000;
+  background: #fff;
+}
+
+.print-header {
+  text-align: center;
+  margin-bottom: 3mm;
+}
+
+.print-title {
+  font-size: 14px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
   color: #000;
 }
 
-.thermal-header {
-  text-align: center;
-  margin-bottom: 4mm;
-}
-
-.thermal-header h3 {
-  font-size: 14px;
+.print-school {
+  font-size: 12px;
   font-weight: bold;
-  margin: 0 0 2mm 0;
-  text-transform: uppercase;
+  margin-top: 1mm;
+  color: #000;
 }
 
-.thermal-header p {
-  margin: 0;
-  font-size: 11px;
+.print-date {
+  font-size: 10px;
+  margin-top: 1mm;
+  color: #000;
 }
 
-.thermal-divider {
-  border-top: 1px dashed #000;
+.print-divider {
+  border-top: 2px dashed #000;
   margin: 3mm 0;
 }
 
-.thermal-body {
-  margin-bottom: 4mm;
-}
-
-.thermal-row {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 2mm;
-  flex-wrap: wrap;
-}
-
-.thermal-label {
+.print-notice {
+  text-align: center;
+  border: 2px solid #000;
+  padding: 2mm;
+  margin-bottom: 3mm;
+  font-size: 11px;
   font-weight: bold;
-  flex-shrink: 0;
-  margin-right: 2mm;
+  color: #000;
 }
 
-.thermal-value {
-  text-align: right;
-  flex: 1;
+.print-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.print-label {
+  font-weight: bold;
+  padding: 1mm 1mm 1mm 0;
+  white-space: nowrap;
+  width: 25mm;
+  color: #000;
+}
+
+.print-value {
+  padding: 1mm 0;
+  color: #000;
   word-break: break-word;
 }
 
-.thermal-footer {
-  text-align: center;
+.print-bold {
+  font-weight: bold;
+}
+
+.print-meta {
+  font-size: 10px;
+  margin-bottom: 2mm;
+  color: #000;
+}
+
+.print-signature {
   margin-top: 4mm;
-  font-size: 11px;
+  text-align: center;
+}
+
+.print-sig-label {
+  font-size: 10px;
+  margin-bottom: 2mm;
+  color: #000;
+}
+
+.print-sig-line {
+  border-bottom: 1px solid #000;
+  width: 35mm;
+  margin: 0 auto;
+  height: 8mm;
+}
+
+.print-sig-name {
+  font-size: 10px;
+  margin-top: 1mm;
+  color: #000;
+}
+
+.print-id {
+  margin-top: 3mm;
+  text-align: center;
+  font-size: 10px;
+  color: #000;
 }
 
 @media print {
@@ -351,27 +402,32 @@ body {
   }
 
   body * {
-    visibility: hidden;
+    visibility: hidden !important;
   }
 
-  .thermal-print,
-  .thermal-print * {
-    visibility: visible;
+  .print-only-receipt,
+  .print-only-receipt * {
+    visibility: visible !important;
   }
 
-  .thermal-print {
+  .print-only-receipt {
     display: block !important;
     position: absolute;
     left: 0;
     top: 0;
     width: 80mm;
     background: white;
+    color: #000;
   }
 
   .mobile-layout,
   .mobile-header,
   .bottom-nav,
-  .mobile-content {
+  .mobile-content,
+  header,
+  nav,
+  .toast,
+  [style*="position: fixed"] {
     display: none !important;
   }
 }

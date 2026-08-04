@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppStore } from '../../lib/store';
-import { Plus, Trash2, FileText, Clock, ArrowRight, ArrowLeft, X, Download } from 'lucide-react';
+import { Plus, Trash2, FileText, Clock, ArrowRight, ArrowLeft, X, Download, Printer } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -23,6 +23,7 @@ const IzinSiswaScreen = () => {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
   const [pdfItem, setPdfItem] = useState(null);
+  const [printItem, setPrintItem] = useState(null);
   const receiptRef = useRef(null);
 
   const todayStr = formatDateISO(new Date());
@@ -44,13 +45,12 @@ const IzinSiswaScreen = () => {
     }
   }, [toast]);
 
-  // Auto-generate PDF when pdfItem changes and receiptRef is ready
+  // Auto-generate PDF when pdfItem changes
   useEffect(() => {
     if (!pdfItem || !receiptRef.current) return;
 
     const generate = async () => {
       try {
-        // Wait for DOM to render
         await new Promise((r) => setTimeout(r, 100));
 
         const canvas = await html2canvas(receiptRef.current, {
@@ -62,8 +62,6 @@ const IzinSiswaScreen = () => {
         });
 
         const imgData = canvas.toDataURL('image/png');
-
-        // PDF size: 80mm width, auto height based on canvas ratio
         const pdfWidth = 80;
         const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
@@ -138,15 +136,20 @@ const IzinSiswaScreen = () => {
     setPdfItem(item);
   };
 
-  const jenisLabel = (item) =>
-    item?.jenisIzin === 'masuk' ? 'IZIN MASUK (Telat)' : 'IZIN KELUAR (Pulang)';
+  const handleDirectPrint = (item) => {
+    setPrintItem(item);
+    setTimeout(() => {
+      window.print();
+      setPrintItem(null);
+    }, 400);
+  };
 
-  const jenisColor = (item) =>
-    item?.jenisIzin === 'masuk' ? '#1976d2' : '#f57c00';
+  const jenisLabel = (item) =>
+    item?.jenisIzin === 'masuk' ? 'IZIN MASUK' : 'IZIN KELUAR';
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      {/* Hidden receipt for html2canvas PDF generation */}
+      {/* Hidden receipt for html2canvas PDF */}
       {pdfItem && (
         <div
           ref={receiptRef}
@@ -164,15 +167,14 @@ const IzinSiswaScreen = () => {
             boxSizing: 'border-box'
           }}
         >
-          {/* Header */}
           <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-            <div style={{ fontSize: '15px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>
+            <div style={{ fontSize: '15px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', color: '#000' }}>
               SURAT IZIN SISWA
             </div>
-            <div style={{ fontSize: '12px', fontWeight: 'bold', marginTop: '2px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 'bold', marginTop: '2px', color: '#000' }}>
               SMKN 1 ARAHAN
             </div>
-            <div style={{ fontSize: '10px', color: '#555', marginTop: '2px' }}>
+            <div style={{ fontSize: '10px', marginTop: '2px', color: '#000' }}>
               {new Date().toLocaleDateString('id-ID', {
                 weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
               })}
@@ -181,56 +183,52 @@ const IzinSiswaScreen = () => {
 
           <div style={{ borderTop: '2px dashed #000', margin: '6px 0' }} />
 
-          {/* Notice for satpam */}
           <div style={{
             textAlign: 'center',
-            backgroundColor: '#fff3cd',
-            border: '1px solid #ffc107',
+            border: '2px solid #000',
             padding: '6px',
             marginBottom: '8px',
             fontSize: '11px',
             fontWeight: 'bold',
-            color: '#856404'
+            color: '#000'
           }}>
             TUNJUKKAN SURAT INI KE SATPAM / PENJAGA GERBANG
           </div>
 
-          {/* Body */}
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <tbody>
               <tr>
-                <td style={{ fontWeight: 'bold', padding: '2px 4px 2px 0', whiteSpace: 'nowrap', width: '70px' }}>Nama</td>
-                <td style={{ padding: '2px 0' }}>: {pdfItem.siswa?.nama || '-'}</td>
+                <td style={{ fontWeight: 'bold', padding: '2px 4px 2px 0', whiteSpace: 'nowrap', width: '70px', color: '#000' }}>Nama</td>
+                <td style={{ padding: '2px 0', color: '#000' }}>: {pdfItem.siswa?.nama || '-'}</td>
               </tr>
               <tr>
-                <td style={{ fontWeight: 'bold', padding: '2px 4px 2px 0' }}>Kelas</td>
-                <td style={{ padding: '2px 0' }}>: {pdfItem.kelas?.nama || '-'}</td>
+                <td style={{ fontWeight: 'bold', padding: '2px 4px 2px 0', color: '#000' }}>Kelas</td>
+                <td style={{ padding: '2px 0', color: '#000' }}>: {pdfItem.kelas?.nama || '-'}</td>
               </tr>
               <tr>
-                <td style={{ fontWeight: 'bold', padding: '2px 4px 2px 0' }}>NIS</td>
-                <td style={{ padding: '2px 0' }}>: {pdfItem.siswa?.nis || '-'}</td>
+                <td style={{ fontWeight: 'bold', padding: '2px 4px 2px 0', color: '#000' }}>NIS</td>
+                <td style={{ padding: '2px 0', color: '#000' }}>: {pdfItem.siswa?.nis || '-'}</td>
               </tr>
               <tr>
-                <td style={{ fontWeight: 'bold', padding: '2px 4px 2px 0' }}>Jenis Izin</td>
-                <td style={{ padding: '2px 0', fontWeight: 'bold', color: jenisColor(pdfItem), textTransform: 'uppercase' }}>
+                <td style={{ fontWeight: 'bold', padding: '2px 4px 2px 0', color: '#000' }}>Jenis Izin</td>
+                <td style={{ padding: '2px 0', fontWeight: 'bold', color: '#000', textTransform: 'uppercase' }}>
                   : {jenisLabel(pdfItem)}
                 </td>
               </tr>
               <tr>
-                <td style={{ fontWeight: 'bold', padding: '2px 4px 2px 0' }}>Jam</td>
-                <td style={{ padding: '2px 0', fontWeight: 'bold' }}>: {pdfItem.jam || '-'}</td>
+                <td style={{ fontWeight: 'bold', padding: '2px 4px 2px 0', color: '#000' }}>Jam</td>
+                <td style={{ padding: '2px 0', fontWeight: 'bold', color: '#000' }}>: {pdfItem.jam || '-'}</td>
               </tr>
               <tr>
-                <td style={{ fontWeight: 'bold', padding: '2px 4px 2px 0', verticalAlign: 'top' }}>Alasan</td>
-                <td style={{ padding: '2px 0', wordBreak: 'break-word' }}>: {pdfItem.alasan || '-'}</td>
+                <td style={{ fontWeight: 'bold', padding: '2px 4px 2px 0', verticalAlign: 'top', color: '#000' }}>Alasan</td>
+                <td style={{ padding: '2px 0', wordBreak: 'break-word', color: '#000' }}>: {pdfItem.alasan || '-'}</td>
               </tr>
             </tbody>
           </table>
 
           <div style={{ borderTop: '2px dashed #000', margin: '8px 0' }} />
 
-          {/* Footer */}
-          <div style={{ fontSize: '10px', color: '#333', marginBottom: '4px' }}>
+          <div style={{ fontSize: '10px', marginBottom: '4px', color: '#000' }}>
             <div>Dibuat oleh: {pdfItem.guruPiket?.nama || user?.nama || '-'}</div>
             <div>
               Jam cetak: {new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
@@ -238,16 +236,82 @@ const IzinSiswaScreen = () => {
           </div>
 
           <div style={{ marginTop: '12px', textAlign: 'center' }}>
-            <div style={{ fontSize: '10px', marginBottom: '4px' }}>Tanda Tangan Guru Piket</div>
+            <div style={{ fontSize: '10px', marginBottom: '4px', color: '#000' }}>Tanda Tangan Guru Piket</div>
             <div style={{ borderBottom: '1px solid #000', width: '140px', margin: '0 auto', height: '30px' }} />
-            <div style={{ fontSize: '10px', marginTop: '4px' }}>
+            <div style={{ fontSize: '10px', marginTop: '4px', color: '#000' }}>
               ({pdfItem.guruPiket?.nama || user?.nama || '-'})
             </div>
           </div>
 
-          {/* Barcode-like ID for authenticity */}
-          <div style={{ marginTop: '10px', textAlign: 'center', fontSize: '10px', color: '#666' }}>
+          <div style={{ marginTop: '10px', textAlign: 'center', fontSize: '10px', color: '#000' }}>
             No. Izin: #{String(pdfItem.id).padStart(4, '0')}
+          </div>
+        </div>
+      )}
+
+      {/* Print-only receipt for direct thermal print */}
+      {printItem && (
+        <div className="print-only-receipt">
+          <div className="print-header">
+            <div className="print-title">SURAT IZIN SISWA</div>
+            <div className="print-school">SMKN 1 ARAHAN</div>
+            <div className="print-date">
+              {new Date().toLocaleDateString('id-ID', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+              })}
+            </div>
+          </div>
+
+          <div className="print-divider" />
+
+          <div className="print-notice">
+            TUNJUKKAN SURAT INI KE SATPAM / PENJAGA GERBANG
+          </div>
+
+          <table className="print-table">
+            <tbody>
+              <tr>
+                <td className="print-label">Nama</td>
+                <td className="print-value">: {printItem.siswa?.nama || '-'}</td>
+              </tr>
+              <tr>
+                <td className="print-label">Kelas</td>
+                <td className="print-value">: {printItem.kelas?.nama || '-'}</td>
+              </tr>
+              <tr>
+                <td className="print-label">NIS</td>
+                <td className="print-value">: {printItem.siswa?.nis || '-'}</td>
+              </tr>
+              <tr>
+                <td className="print-label">Jenis Izin</td>
+                <td className="print-value print-bold">: {jenisLabel(printItem)}</td>
+              </tr>
+              <tr>
+                <td className="print-label">Jam</td>
+                <td className="print-value print-bold">: {printItem.jam || '-'}</td>
+              </tr>
+              <tr>
+                <td className="print-label" style={{ verticalAlign: 'top' }}>Alasan</td>
+                <td className="print-value">: {printItem.alasan || '-'}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div className="print-divider" />
+
+          <div className="print-meta">
+            <div>Dibuat oleh: {printItem.guruPiket?.nama || user?.nama || '-'}</div>
+            <div>Jam cetak: {new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</div>
+          </div>
+
+          <div className="print-signature">
+            <div className="print-sig-label">Tanda Tangan Guru Piket</div>
+            <div className="print-sig-line" />
+            <div className="print-sig-name">({printItem.guruPiket?.nama || user?.nama || '-'})</div>
+          </div>
+
+          <div className="print-id">
+            No. Izin: #{String(printItem.id).padStart(4, '0')}
           </div>
         </div>
       )}
@@ -423,15 +487,26 @@ const IzinSiswaScreen = () => {
 
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
                   <button
+                    onClick={() => handleDirectPrint(item)}
+                    className="card"
+                    style={{
+                      flex: 1, padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem',
+                      border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600',
+                      backgroundColor: '#000', color: '#fff'
+                    }}
+                  >
+                    <Printer size={14} /> Cetak Thermal
+                  </button>
+                  <button
                     onClick={() => handleDownloadPDF(item)}
                     className="card"
                     style={{
                       flex: 1, padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem',
-                      border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600',
+                      border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600',
                       backgroundColor: 'var(--surface-hover)', color: 'var(--primary)'
                     }}
                   >
-                    <Download size={16} /> Download PDF (80mm)
+                    <Download size={14} /> Download PDF
                   </button>
                   <button
                     onClick={() => handleDelete(item.id)}
