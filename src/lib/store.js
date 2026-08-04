@@ -670,6 +670,18 @@ export const useAppStore = create((set, get) => ({
     return newData;
   },
 
+  createPermohonanIzinBatch: async (payload) => {
+    const res = await fetch(`${API_BASE}/izin/batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Gagal membuat batch permohonan izin');
+    const newData = await res.json();
+    set((state) => ({ permohonanIzin: [...newData, ...state.permohonanIzin] }));
+    return newData;
+  },
+
   updatePermohonanIzin: async (id, data) => {
     const res = await fetch(`${API_BASE}/izin/${id}`, {
       method: 'PUT',

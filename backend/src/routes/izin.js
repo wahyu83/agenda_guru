@@ -127,4 +127,44 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// POST batch permohonan izin (multiple students at once)
+router.post('/batch', async (req, res) => {
+  try {
+    const { items, tanggal, jenisIzin, jam, alasan, guruPiketId } = req.body;
+
+    if (!Array.isArray(items) || items.length === 0 || !jenisIzin || !jam || !alasan || !guruPiketId) {
+      return res.status(400).json({ error: 'Data tidak lengkap' });
+    }
+
+    const targetDate = tanggal ? toUTCDate(tanggal) : toUTCDate(todayLocalStr());
+
+    const created = await prisma.$transaction(
+      items.map((item) =>
+        prisma.permohonanIzin.create({
+          data: {
+            siswaId: parseInt(item.siswaId),
+            kelasId: parseInt(item.kelasId),
+            jenisIzin,
+            tanggal: targetDate,
+            jam,
+            alasan,
+            guruPiketId: parseInt(guruPiketId),
+            status: 'diajukan'
+          },
+          include: {
+            siswa: true,
+            kelas: true,
+            guruPiket: { select: { id: true, nama: true } }
+          }
+        })
+      )
+    );
+
+    res.json(created);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal membuat batch permohonan izin' });
+  }
+});
+
 module.exports = router;
