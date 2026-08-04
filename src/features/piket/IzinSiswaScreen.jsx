@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useAppStore } from '../../lib/store';
-import { Plus, Trash2, Printer, FileText, Clock, ArrowRight, ArrowLeft, AlertCircle, CheckCircle, X } from 'lucide-react';
+import { Plus, Trash2, FileText, Clock, ArrowRight, ArrowLeft, X, Download } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 
 const formatDateISO = (date) => {
   const year = date.getFullYear();
@@ -10,7 +11,7 @@ const formatDateISO = (date) => {
 };
 
 const IzinSiswaScreen = () => {
-  const { user, kelas, siswa, siswaKelasAktif, permohonanIzin, fetchSiswaKelas, fetchPermohonanIzin, createPermohonanIzin, deletePermohonanIzin } = useAppStore();
+  const { user, kelas, siswaKelasAktif, permohonanIzin, fetchSiswaKelas, fetchPermohonanIzin, createPermohonanIzin, deletePermohonanIzin } = useAppStore();
 
   const [showForm, setShowForm] = useState(false);
   const [selectedKelasId, setSelectedKelasId] = useState('');
@@ -20,8 +21,6 @@ const IzinSiswaScreen = () => {
   const [alasan, setAlasan] = useState('');
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
-  const [printItem, setPrintItem] = useState(null);
-  const printRef = useRef();
 
   const todayStr = formatDateISO(new Date());
 
@@ -86,16 +85,118 @@ const IzinSiswaScreen = () => {
     }
   };
 
-  const handlePrint = (item) => {
-    setPrintItem(item);
-    setTimeout(() => {
-      window.print();
-      setPrintItem(null);
-    }, 300);
+  // Generate PDF using jsPDF (80mm thermal receipt)
+  const generateIzinPDF = (item) => {
+    try {
+      const doc = new jsPDF({
+        unit: 'mm',
+        format: [80, 200],
+        orientation: 'portrait'
+      });
+
+      const pageWidth = 80;
+      const margin = 4;
+      const contentWidth = pageWidth - (margin * 2);
+      let y = 8;
+
+      // Header
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text('SURAT IZIN SISWA', pageWidth / 2, y, { align: 'center' });
+      y += 5;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text('SMKN 1 Arahan', pageWidth / 2, y, { align: 'center' });
+      y += 4;
+
+      const today = new Date();
+      const dateStr = today.toLocaleDateString('id-ID', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+      });
+      doc.setFontSize(9);
+      doc.text(dateStr, pageWidth / 2, y, { align: 'center' });
+      y += 6;
+
+      // Divider
+      doc.setDrawColor(0);
+      doc.setLineWidth(0.3);
+      doc.line(margin, y, pageWidth - margin, y);
+      y += 5;
+
+      // Helper to add label-value row
+      const addRow = (label, value, isBold = false) => {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.text(label, margin, y);
+        doc.setFont('helvetica', isBold ? 'bold' : 'normal');
+        doc.setFontSize(9);
+        const textLines = doc.splitTextToSize(value, contentWidth - 25);
+        doc.text(textLines, pageWidth - margin, y, { align: 'right' });
+        y += (textLines.length * 3.5) + 1.5;
+      };
+
+      addRow('Nama', item.siswa?.nama || '-');
+      addRow('Kelas', item.kelas?.nama || '-');
+      addRow('NIS', item.siswa?.nis || '-');
+
+      const jenisLabel = item.jenisIzin === 'masuk'
+        ? 'IZIN MASUK (Telat)'
+        : 'IZIN KELUAR (Pulang)';
+      addRow('Jenis Izin', jenisLabel, true);
+
+      addRow('Jam', item.jam || '-');
+
+      // Alasan (multiline)
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.text('Alasan:', margin, y);
+      y += 3.5;
+      doc.setFont('helvetica', 'normal');
+      const alasanLines = doc.splitTextToSize(item.alasan || '-', contentWidth);
+      doc.text(alasanLines, margin, y);
+      y += (alasanLines.length * 3.5) + 3;
+
+      // Divider
+      doc.line(margin, y, pageWidth - margin, y);
+      y += 5;
+
+      // Footer info
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      doc.setFontSize(8);
+      doc.text(`Dicetak: ${dateStr} ${timeStr}`, margin, y);
+      y += 3.5;
+      doc.text(`Oleh: ${item.guruPiket?.nama || user?.nama || '-'}`, margin, y);
+      y += 8;
+
+      // Signature
+      doc.setFontSize(9);
+      doc.text('Tanda Tangan', pageWidth - margin - 25, y);
+      y += 12;
+      doc.line(pageWidth - margin - 30, y, pageWidth - margin, y);
+      y += 3.5;
+      doc.setFontSize(8);
+      doc.text('Guru Piket', pageWidth - margin - 15, y, { align: 'center' });
+
+      // Trim page height to content
+      const finalHeight = y + 8;
+      doc.internal.pageSize.setHeight(finalHeight);
+
+      // Save
+      const fileName = `izin_${item.siswa?.nama?.replace(/\s+/g, '_') || 'siswa'}_${todayStr}.pdf`;
+      doc.save(fileName);
+
+      setToast({ type: 'success', message: 'PDF berhasil diunduh' });
+    } catch (err) {
+      console.error('PDF generation error:', err);
+      setToast({ type: 'error', message: 'Gagal membuat PDF: ' + err.message });
+    }
   };
 
-  const now = new Date();
-  const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const handlePrint = (item) => {
+    generateIzinPDF(item);
+  };
 
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -109,53 +210,6 @@ const IzinSiswaScreen = () => {
           boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
         }}>
           {toast.message}
-        </div>
-      )}
-
-      {/* Print Thermal Preview (hidden until print) */}
-      {printItem && (
-        <div ref={printRef} className="thermal-print">
-          <div className="thermal-header">
-            <h3>SURAT IZIN SISWA</h3>
-            <p>SMKN 1 Arahan</p>
-            <p>{new Date().toLocaleDateString('id-ID', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}</p>
-            <div className="thermal-divider" />
-          </div>
-
-          <div className="thermal-body">
-            <div className="thermal-row">
-              <span className="thermal-label">Nama</span>
-              <span className="thermal-value">{printItem.siswa?.nama}</span>
-            </div>
-            <div className="thermal-row">
-              <span className="thermal-label">Kelas</span>
-              <span className="thermal-value">{printItem.kelas?.nama}</span>
-            </div>
-            <div className="thermal-row">
-              <span className="thermal-label">Jenis Izin</span>
-              <span className="thermal-value" style={{ textTransform: 'uppercase', fontWeight: 'bold' }}>
-                {printItem.jenisIzin === 'masuk' ? 'IZIN MASUK (Telat)' : 'IZIN KELUAR (Pulang)'}
-              </span>
-            </div>
-            <div className="thermal-row">
-              <span className="thermal-label">Jam</span>
-              <span className="thermal-value">{printItem.jam}</span>
-            </div>
-            <div className="thermal-row">
-              <span className="thermal-label">Alasan</span>
-              <span className="thermal-value">{printItem.alasan}</span>
-            </div>
-          </div>
-
-          <div className="thermal-divider" />
-
-          <div className="thermal-footer">
-            <p>Dibuat oleh: {printItem.guruPiket?.nama}</p>
-            <p>Jam cetak: {currentTime}</p>
-            <br />
-            <p>_________________________</p>
-            <p>Tanda Tangan Guru Piket</p>
-          </div>
         </div>
       )}
 
@@ -325,7 +379,7 @@ const IzinSiswaScreen = () => {
                       backgroundColor: 'var(--surface-hover)', color: 'var(--primary)'
                     }}
                   >
-                    <Printer size={16} /> Cetak (80mm)
+                    <Download size={16} /> Download PDF (80mm)
                   </button>
                   <button
                     onClick={() => handleDelete(item.id)}
