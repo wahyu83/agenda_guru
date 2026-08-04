@@ -85,11 +85,16 @@ const IzinSiswaScreen = () => {
 
   const toggleSiswa = (s) => {
     const id = String(s.id);
+    console.log('[toggleSiswa] clicked id:', id, 'current selected:', selectedStudents);
     setSelectedStudents((prev) => {
       if (prev.some((x) => String(x.siswaId) === id)) {
-        return prev.filter((x) => String(x.siswaId) !== id);
+        const next = prev.filter((x) => String(x.siswaId) !== id);
+        console.log('[toggleSiswa] removed, next count:', next.length);
+        return next;
       }
-      return [...prev, { siswaId: id, kelasId: viewKelasId, nama: s.nama, nis: s.nis, kelasNama: currentKelasNama }];
+      const next = [...prev, { siswaId: id, kelasId: viewKelasId, nama: s.nama, nis: s.nis, kelasNama: currentKelasNama }];
+      console.log('[toggleSiswa] added, next count:', next.length);
+      return next;
     });
   };
 
@@ -112,12 +117,18 @@ const IzinSiswaScreen = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('[handleSubmit] selectedStudents:', selectedStudents.length, 'jam:', jam, 'alasan:', alasan, 'user:', user);
     if (selectedStudents.length === 0 || !jam || !alasan) {
       setToast({ type: 'error', message: 'Pilih minimal 1 siswa dan isi semua field' });
       return;
     }
+    if (!user?.id) {
+      setToast({ type: 'error', message: 'Session tidak valid, silakan login ulang' });
+      return;
+    }
     setSaving(true);
     try {
+      console.log('[handleSubmit] calling batch API with', selectedStudents.length, 'students');
       await createPermohonanIzinBatch({
         items: selectedStudents.map((s) => ({ siswaId: s.siswaId, kelasId: s.kelasId })),
         tanggal: todayStr,
@@ -133,6 +144,7 @@ const IzinSiswaScreen = () => {
       setJam('');
       setAlasan('');
     } catch (err) {
+      console.error('[handleSubmit] error:', err);
       setToast({ type: 'error', message: err.message || 'Gagal menyimpan' });
     } finally {
       setSaving(false);
@@ -315,7 +327,7 @@ const IzinSiswaScreen = () => {
                 {siswaOptions.map((s) => {
                   const checked = isSelected(s.id);
                   return (
-                    <label
+                    <div
                       key={s.id}
                       onClick={() => toggleSiswa(s)}
                       style={{
@@ -330,7 +342,7 @@ const IzinSiswaScreen = () => {
                       {checked ? <CheckSquare size={18} /> : <Square size={18} />}
                       <span>{s.nama}</span>
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 'auto' }}>{s.nis}</span>
-                    </label>
+                    </div>
                   );
                 })}
               </div>
