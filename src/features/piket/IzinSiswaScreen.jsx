@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useAppStore } from '../../lib/store';
 import { Plus, Trash2, FileText, Clock, ArrowRight, ArrowLeft, X, Download, Printer, CheckSquare, Square, XCircle } from 'lucide-react';
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
 
 const formatDateISO = (date) => {
   const year = date.getFullYear();
@@ -28,6 +27,177 @@ const groupByBatch = (items) => {
   return Object.values(groups).sort((a, b) =>
     new Date(b.shared.createdAt) - new Date(a.shared.createdAt)
   );
+};
+
+const downloadReceiptImage = (group, user, onSuccess, onError) => {
+  const W = 640;
+  const PAD = 40;
+  const tmpCtx = document.createElement('canvas').getContext('2d');
+
+  const measure = (text, font) => {
+    tmpCtx.font = font;
+    return tmpCtx.measureText(text).width;
+  };
+
+  const wrapText = (text, maxWidth, font) => {
+    const words = String(text || '-').split(' ');
+    const lines = [];
+    let current = '';
+    for (const word of words) {
+      const test = current + (current ? ' ' : '') + word;
+      if (measure(test, font) > maxWidth && current) {
+        lines.push(current);
+        current = word;
+      } else {
+        current = test;
+      }
+    }
+    if (current) lines.push(current);
+    return lines.length ? lines : ['-'];
+  };
+
+  // Calculate required height
+  let h = PAD;
+  h += 36 + 24 + 20 + 20; // title area
+  h += 4 + 20; // divider
+  h += 44 + 20; // notice
+  const alasanLines = wrapText(group.shared.alasan || '-', W - PAD * 2 - 120, '20px monospace');
+  h += 28 * 2 + alasanLines.length * 28 + 20; // info
+  h += 4 + 20; // divider
+  h += 28 + group.items.length * 28 + 20; // student list
+  h += 4 + 20; // divider
+  h += 20 * 2 + 20; // footer
+  h += 20 + 44 + 20 + 20; // signature
+  h += 16 + PAD; // group id + bottom pad
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = h;
+  const c = canvas.getContext('2d');
+
+  // White background
+  c.fillStyle = '#ffffff';
+  c.fillRect(0, 0, W, h);
+  c.fillStyle = '#000000';
+  c.strokeStyle = '#000000';
+  c.setLineDash([8, 4]);
+
+  let y = PAD;
+
+  // Title
+  c.font = 'bold 24px monospace';
+  c.textAlign = 'center';
+  c.fillText('SURAT IZIN SISWA', W / 2, y);
+  y += 36;
+  c.font = 'bold 20px monospace';
+  c.fillText('SMKN 1 ARAHAN', W / 2, y);
+  y += 24;
+  c.font = '16px monospace';
+  const dateStr = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  c.fillText(dateStr, W / 2, y);
+  y += 20 + 20;
+
+  // Divider
+  c.beginPath();
+  c.moveTo(PAD, y);
+  c.lineTo(W - PAD, y);
+  c.stroke();
+  y += 4 + 20;
+
+  // Notice box
+  c.setLineDash([]);
+  c.strokeRect(PAD, y, W - PAD * 2, 44);
+  c.font = 'bold 16px monospace';
+  c.textAlign = 'center';
+  c.fillText('TUNJUKKAN SURAT INI KE SATPAM / PENJAGA GERBANG', W / 2, y + 28);
+  y += 44 + 20;
+
+  // Info
+  c.textAlign = 'left';
+  const jns = group.shared.jenisIzin === 'masuk' ? 'IZIN MASUK' : 'IZIN KELUAR';
+  c.font = 'bold 20px monospace';
+  c.fillText('Jenis Izin', PAD, y);
+  c.fillText(': ' + jns, PAD + 120, y);
+  y += 28;
+  c.fillText('Jam', PAD, y);
+  c.font = '20px monospace';
+  c.fillText(': ' + (group.shared.jam || '-'), PAD + 120, y);
+  y += 28;
+  c.font = 'bold 20px monospace';
+  c.fillText('Alasan', PAD, y);
+  c.font = '20px monospace';
+  const alasanLines2 = wrapText(group.shared.alasan || '-', W - PAD * 2 - 120, '20px monospace');
+  c.fillText(': ' + alasanLines2[0], PAD + 120, y);
+  for (let i = 1; i < alasanLines2.length; i++) {
+    y += 28;
+    c.fillText(alasanLines2[i], PAD + 120, y);
+  }
+  y += 28 + 20;
+
+  // Divider
+  c.beginPath();
+  c.setLineDash([8, 4]);
+  c.moveTo(PAD, y);
+  c.lineTo(W - PAD, y);
+  c.stroke();
+  c.setLineDash([]);
+  y += 4 + 20;
+
+  // Student list
+  c.font = 'bold 20px monospace';
+  c.fillText('Daftar Siswa:', PAD, y);
+  y += 28;
+  c.font = '20px monospace';
+  group.items.forEach((item, idx) => {
+    c.fillText(String(idx + 1), PAD, y);
+    c.fillText(item.siswa?.nama || '-', PAD + 40, y);
+    c.fillText(item.kelas?.nama || '-', PAD + 420, y);
+    y += 28;
+  });
+  y += 20;
+
+  // Divider
+  c.beginPath();
+  c.setLineDash([8, 4]);
+  c.moveTo(PAD, y);
+  c.lineTo(W - PAD, y);
+  c.stroke();
+  c.setLineDash([]);
+  y += 4 + 20;
+
+  // Footer
+  c.font = '16px monospace';
+  c.fillText('Dibuat oleh: ' + (group.shared.guruPiket?.nama || user?.nama || '-'), PAD, y);
+  y += 20;
+  c.fillText('Jam cetak: ' + new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }), PAD, y);
+  y += 20 + 20;
+
+  // Signature
+  c.textAlign = 'center';
+  c.fillText('Tanda Tangan Guru Piket', W / 2, y);
+  y += 20;
+  c.beginPath();
+  c.moveTo(W / 2 - 100, y);
+  c.lineTo(W / 2 + 100, y);
+  c.stroke();
+  y += 4 + 20;
+  c.fillText('(' + (group.shared.guruPiket?.nama || user?.nama || '-') + ')', W / 2, y);
+  y += 20 + 20;
+  c.font = '14px monospace';
+  c.fillText('No. Izin Grup: ' + (group.batchId || '#' + String(group.shared.id).padStart(4, '0')), W / 2, y);
+
+  canvas.toBlob((blob) => {
+    if (!blob) { onError('Gagal membuat blob'); return; }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'izin_siswa_' + (group.shared.tanggal || new Date().toISOString().split('T')[0]) + '.png';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    onSuccess();
+  }, 'image/png');
 };
 
 const IzinSiswaScreen = () => {
@@ -62,35 +232,6 @@ const IzinSiswaScreen = () => {
       return () => clearTimeout(t);
     }
   }, [toast]);
-
-  // Auto-generate PDF when printGroup changes
-  useEffect(() => {
-    if (!printGroup || !receiptRef.current) return;
-    const generate = async () => {
-      try {
-        await new Promise((r) => setTimeout(r, 100));
-        const canvas = await html2canvas(receiptRef.current, {
-          scale: 3, useCORS: true, backgroundColor: '#ffffff',
-          width: receiptRef.current.offsetWidth,
-          height: receiptRef.current.offsetHeight
-        });
-        const imgData = canvas.toDataURL('image/png');
-        const pdfWidth = 80;
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        const doc = new jsPDF({ unit: 'mm', format: [pdfWidth, pdfHeight], orientation: 'portrait' });
-        doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        const fileName = `izin_group_${printGroup.shared.tanggal || todayStr}.pdf`;
-        doc.save(fileName);
-        setToast({ type: 'success', message: 'PDF berhasil diunduh' });
-        setPrintGroup(null);
-      } catch (err) {
-        console.error('PDF error:', err);
-        setToast({ type: 'error', message: 'Gagal membuat PDF: ' + err.message });
-        setPrintGroup(null);
-      }
-    };
-    generate();
-  }, [printGroup, todayStr]);
 
   const siswaOptions = useMemo(() => siswaKelasAktif || [], [siswaKelasAktif]);
   const groupedIzin = useMemo(() => groupByBatch(permohonanIzin), [permohonanIzin]);
@@ -175,7 +316,14 @@ const IzinSiswaScreen = () => {
     }
   };
 
-  const handleDownloadPDF = (group) => setPrintGroup(group);
+  const handleDownloadImage = (group) => {
+    downloadReceiptImage(
+      group,
+      user,
+      () => setToast({ type: 'success', message: 'Gambar berhasil diunduh' }),
+      (msg) => setToast({ type: 'error', message: msg })
+    );
+  };
 
   const handleDirectPrint = (group) => {
     setPrintGroup(group);
@@ -189,9 +337,9 @@ const IzinSiswaScreen = () => {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      {/* Hidden receipt for html2canvas PDF / print */}
-      {printGroup && (
-        <div ref={receiptRef} style={{ position: 'fixed', top: '-9999px', left: '-9999px', width: '320px', padding: '12px', backgroundColor: '#fff', fontFamily: "'Courier New', 'Consolas', monospace", fontSize: '13px', lineHeight: 1.5, color: '#000', boxSizing: 'border-box' }}>
+      {/* Hidden receipt for print */}
+      {printGroup && createPortal(
+        <div ref={receiptRef} className="print-only-receipt" style={{ position: 'fixed', top: '-9999px', left: '-9999px', width: '320px', padding: '12px', backgroundColor: '#fff', fontFamily: "'Courier New', 'Consolas', monospace", fontSize: '13px', lineHeight: 1.5, color: '#000', boxSizing: 'border-box' }}>
           <div style={{ textAlign: 'center', marginBottom: '8px' }}>
             <div style={{ fontSize: '15px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', color: '#000' }}>SURAT IZIN SISWA</div>
             <div style={{ fontSize: '12px', fontWeight: 'bold', marginTop: '2px', color: '#000' }}>SMKN 1 ARAHAN</div>
@@ -247,7 +395,8 @@ const IzinSiswaScreen = () => {
           <div style={{ marginTop: '10px', textAlign: 'center', fontSize: '10px', color: '#000' }}>
             No. Izin Grup: {printGroup.batchId || `#${String(printGroup.shared.id).padStart(4, '0')}`}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Toast */}
@@ -433,11 +582,11 @@ const IzinSiswaScreen = () => {
                       <Printer size={14} /> Cetak Thermal
                     </button>
                     <button
-                      onClick={() => handleDownloadPDF(group)}
+                      onClick={() => handleDownloadImage(group)}
                       className="card"
                       style={{ flex: 1, padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600', backgroundColor: 'var(--surface-hover)', color: 'var(--primary)' }}
                     >
-                      <Download size={14} /> Download PDF
+                      <Download size={14} /> Download Gambar
                     </button>
                     {isBatch && (
                       <button
