@@ -37,9 +37,13 @@ router.put('/tahun-pelajaran/:id/active', async (req, res) => {
   res.json(data);
 });
 
-// --- GURU (User role: guru) ---
+// --- GURU (User role: guru atau guru_piket) ---
 router.get('/guru', async (req, res) => {
-  const data = await prisma.user.findMany({ where: { role: 'guru' } });
+  const data = await prisma.user.findMany({
+    where: {
+      role: { in: ['guru', 'guru_piket'] }
+    }
+  });
   res.json(data);
 });
 

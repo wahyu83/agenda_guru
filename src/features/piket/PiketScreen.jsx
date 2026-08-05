@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAppStore } from '../../lib/store';
-import { CheckCircle, XCircle, Clock, AlertCircle, ChevronLeft, ChevronRight, Calendar, Lock, Loader2 } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, AlertCircle, ChevronLeft, ChevronRight, Calendar, Lock, Loader2, Filter } from 'lucide-react';
 
 const HARI = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 const BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
@@ -18,11 +18,12 @@ const formatDateISO = (date) => {
 
 const PiketScreen = () => {
   const { user, jadwalPiket, jamPelajaran, fetchJadwalPiket, savePiket, fetchJamPelajaran } = useAppStore();
-  
+
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [savingId, setSavingId] = useState(null);
   const [toast, setToast] = useState(null);
-  
+  const [selectedKelasFilter, setSelectedKelasFilter] = useState('all');
+
   const selectedHari = HARI[selectedDate.getDay()];
   const selectedDateISO = formatDateISO(selectedDate);
 
@@ -68,15 +69,29 @@ const PiketScreen = () => {
     return m;
   }, [jamPelajaran]);
 
-  const grouped = useMemo(() => {
+  // Daftar kelas unik untuk filter
+  const uniqueKelas = useMemo(() => {
+    const set = new Set(jadwalPiket.map(item => item.kelas));
+    return Array.from(set).sort();
+  }, [jadwalPiket]);
+
+  // Group by kelas, lalu urutkan by jamKe
+  const groupedByKelas = useMemo(() => {
     const map = {};
     jadwalPiket.forEach(item => {
-      const key = item.jamKe;
-      if (!map[key]) map[key] = [];
-      map[key].push(item);
+      if (!map[item.kelas]) map[item.kelas] = [];
+      map[item.kelas].push(item);
     });
-    return Object.entries(map).sort((a, b) => parseInt(a[0]) - parseInt(b[0]));
+    // Urutkan jam dalam setiap kelas
+    Object.values(map).forEach(list => list.sort((a, b) => a.jamKe - b.jamKe));
+    return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0]));
   }, [jadwalPiket]);
+
+  // Terapkan filter kelas
+  const filteredGrouped = useMemo(() => {
+    if (selectedKelasFilter === 'all') return groupedByKelas;
+    return groupedByKelas.filter(([kelas]) => kelas === selectedKelasFilter);
+  }, [groupedByKelas, selectedKelasFilter]);
 
   const handleStatus = async (pengampuId, status) => {
     if (!user?.id) {
@@ -104,7 +119,20 @@ const PiketScreen = () => {
 
   const isLibur = selectedHari === 'Sabtu' || selectedHari === 'Minggu';
   const isToday = selectedDate.toDateString() === new Date().toDateString();
-  const canEdit = isToday; // hanya hari ini yang boleh di-pantau / diperbaiki
+  const canEdit = isToday;
+
+  // Helper: format label jam dengan rentang waktu
+  const formatJamLabel = (jamKe, jamSampai) => {
+    const mulai = parseInt(jamKe);
+    const akhir = parseInt(jamSampai) || mulai;
+    const waktuMulai = jamMap[mulai];
+    const waktuAkhir = jamMap[akhir] ? jamMap[akhir].split(' - ')[1] : null;
+    const rentang = waktuMulai && waktuAkhir
+      ? `${waktuMulai.split(' - ')[0]} - ${waktuAkhir}`
+      : (jamMap[mulai] || `Jam ke-${jamKe}`);
+    const label = akhir > mulai ? `Jam ke-${mulai} s.d. ${akhir}` : `Jam ke-${mulai}`;
+    return { label, rentang };
+  };
 
   if (isLibur) {
     return (
@@ -196,6 +224,24 @@ const PiketScreen = () => {
         </button>
       )}
 
+      {/* Filter Kelas */}
+      {uniqueKelas.length > 0 && (
+        <div className="card" style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <Filter size={18} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+          <select
+            className="input"
+            value={selectedKelasFilter}
+            onChange={(e) => setSelectedKelasFilter(e.target.value)}
+            style={{ flex: 1, fontSize: '0.9rem' }}
+          >
+            <option value="all">Semua Kelas</option>
+            {uniqueKelas.map(k => (
+              <option key={k} value={k}>{k}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {jadwalPiket.length === 0 ? (
         <div className="card" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
           <AlertCircle size={48} style={{ margin: '0 auto 1rem', opacity: 0.3 }} />
@@ -203,24 +249,41 @@ const PiketScreen = () => {
           <p style={{ fontSize: '0.8rem', marginTop: '0.25rem' }}>Hubungi admin untuk mengatur jadwal pelajaran</p>
         </div>
       ) : (
-        grouped.map(([jamKe, items]) => {
-          const jamMulai = parseInt(jamKe);
-          const jamAkhir = items[0]?.jamSampai || jamMulai;
-          const waktuMulai = jamMap[jamMulai];
-          const waktuAkhir = jamMap[jamAkhir] ? jamMap[jamAkhir].split(' - ')[1] : null;
-          const rentangWaktu = waktuMulai && waktuAkhir ? `${waktuMulai.split(' - ')[0]} - ${waktuAkhir}` : (jamMap[jamMulai] || `Jam ke-${jamKe}`);
-          const labelJam = jamAkhir > jamMulai ? `Jam ke-${jamMulai} s.d. ${jamAkhir}` : `Jam ke-${jamMulai}`;
-
+        filteredGrouped.map(([kelas, items]) => {
           return (
-            <div key={jamKe}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                <Clock size={16} style={{ color: 'var(--primary)' }} />
-                <span style={{ fontWeight: '600', fontSize: '0.9rem', color: 'var(--primary)' }}>
-                  {labelJam} ({rentangWaktu})
+            <div key={kelas} className="card" style={{ padding: '1rem', overflow: 'hidden' }}>
+              {/* Header Kelas */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                marginBottom: '0.75rem',
+                paddingBottom: '0.75rem',
+                borderBottom: '1px solid var(--border-color)'
+              }}>
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: 'var(--radius-md)',
+                  backgroundColor: 'var(--primary-light)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--primary)',
+                  fontWeight: '700',
+                  fontSize: '0.8rem'
+                }}>
+                  {kelas.split(' ')[0] || kelas.charAt(0)}
+                </div>
+                <span style={{ fontWeight: '700', fontSize: '1rem', color: 'var(--primary)' }}>
+                  {kelas}
                 </span>
               </div>
+
+              {/* Daftar Jam dalam Kelas */}
               <div className="flex flex-col gap-2">
                 {items.map(item => {
+                  const { label, rentang } = formatJamLabel(item.jamKe, item.jamSampai);
                   const status = item.piket?.status;
                   const isHadir = status === 'hadir';
                   const isTidakHadir = status === 'tidak_hadir';
@@ -228,31 +291,39 @@ const PiketScreen = () => {
                   const sudahDicek = !!status;
                   const isSaving = savingId === item.id;
 
-                  // Status label untuk mode read-only
-                  const statusLabel = isHadir ? 'Hadir' : isTerlambat ? 'Terlambat' : isTidakHadir ? 'Tidak Hadir' : 'Belum dipantau';
+                  const statusLabel = isHadir ? 'H' : isTerlambat ? 'T' : isTidakHadir ? 'A' : 'Belum dipantau';
                   const statusColor = isHadir ? 'var(--secondary)' : isTerlambat ? 'var(--warning)' : isTidakHadir ? 'var(--danger)' : 'var(--text-muted)';
 
                   return (
-                    <div key={item.id} className="card" style={{
-                      padding: '0.75rem 1rem',
-                      borderLeft: `4px solid ${sudahDicek ? (isHadir ? 'var(--secondary)' : isTerlambat ? 'var(--warning)' : 'var(--danger)') : 'var(--border-color)'}`,
-                      display: 'flex', alignItems: 'center', gap: '0.75rem',
-                      opacity: isSaving ? 0.7 : 1
+                    <div key={item.id} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      padding: '0.6rem 0',
+                      borderBottom: '1px solid var(--border-color)'
                     }}>
+                      {/* Info Jam & Mapel */}
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontWeight: '600', fontSize: '0.9rem' }}>{item.mapel}</p>
-                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                          {item.guru} &middot; {item.kelas}
-                        </p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.25rem' }}>
+                          <Clock size={14} style={{ color: 'var(--primary)' }} />
+                          <span style={{ fontWeight: '600', fontSize: '0.85rem', color: 'var(--primary)' }}>
+                            {label}
+                          </span>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            ({rentang})
+                          </span>
+                        </div>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{item.guru}</p>
                         {item.piket && (
                           <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.125rem' }}>
                             Terakhir diperbarui: {new Date(item.piket.createdAt).toLocaleString('id-ID')}
                           </p>
                         )}
                       </div>
-                      <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0 }}>
+
+                      {/* Status / Tombol */}
+                      <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                         {canEdit ? (
-                          // Mode edit: tampilkan tombol interaktif
                           <>
                             <button
                               disabled={isSaving}
@@ -266,7 +337,7 @@ const PiketScreen = () => {
                                 opacity: isSaving ? 0.6 : 1
                               }}
                             >
-                              {isSaving ? <Loader2 size={14} className="spin" /> : <CheckCircle size={14} />} Hadir
+                              {isSaving ? <Loader2 size={14} className="spin" /> : <CheckCircle size={14} />} H
                             </button>
                             <button
                               disabled={isSaving}
@@ -280,7 +351,7 @@ const PiketScreen = () => {
                                 opacity: isSaving ? 0.6 : 1
                               }}
                             >
-                              {isSaving ? <Loader2 size={14} className="spin" /> : <Clock size={14} />} Terlambat
+                              {isSaving ? <Loader2 size={14} className="spin" /> : <Clock size={14} />} T
                             </button>
                             <button
                               disabled={isSaving}
@@ -294,11 +365,10 @@ const PiketScreen = () => {
                                 opacity: isSaving ? 0.6 : 1
                               }}
                             >
-                              {isSaving ? <Loader2 size={14} className="spin" /> : <XCircle size={14} />} Tdk Hadir
+                              {isSaving ? <Loader2 size={14} className="spin" /> : <XCircle size={14} />} A
                             </button>
                           </>
                         ) : (
-                          // Mode read-only: tampilkan status saja tanpa tombol
                           <div style={{
                             padding: '0.35rem 0.75rem',
                             borderRadius: 'var(--radius-md)',
