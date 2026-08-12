@@ -369,8 +369,9 @@ const LaporanScreen = () => {
       if (!kelasMap[kelasId]) {
         kelasMap[kelasId] = { nama: kelasNama, mapel: {} };
       }
+      const guruNama = session.pengampu?.guru?.nama || '-';
       if (!kelasMap[kelasId].mapel[mapelId]) {
-        kelasMap[kelasId].mapel[mapelId] = { nama: mapelNama, siswa: {} };
+        kelasMap[kelasId].mapel[mapelId] = { nama: mapelNama, guru: guruNama, siswa: {} };
       }
       session.siswaDetail.forEach(d => {
         const sid = d.siswaId;
@@ -396,6 +397,7 @@ const LaporanScreen = () => {
         csvRows.push([]);
         Object.values(k.mapel).sort((a, b) => a.nama.localeCompare(b.nama)).forEach(mp => {
           csvRows.push([`Mapel: ${mp.nama}`]);
+          csvRows.push([`Guru: ${mp.guru}`]);
           csvRows.push(['No', 'NIS', 'Nama Siswa', 'Hadir', 'Sakit', 'Izin', 'Alpa', 'Persentase', 'Status']);
           const siswaList = Object.values(mp.siswa).sort((a, b) => String(a.nis).localeCompare(String(b.nis), undefined, { numeric: true }));
           siswaList.forEach((s, idx) => {
@@ -423,8 +425,10 @@ const LaporanScreen = () => {
             doc.text(titleText, 14, 15);
             doc.setFontSize(11);
             doc.text(`Kelas: ${k.nama} — Mapel: ${mp.nama}`, 14, 23);
+            doc.setFontSize(10);
+            doc.text(`Guru: ${mp.guru}`, 14, 29);
             doc.setFontSize(9);
-            doc.text('Keterangan: H=Hadir, S=Sakit, I=Izin, A=Alpa', 14, 29);
+            doc.text('Keterangan: H=Hadir, S=Sakit, I=Izin, A=Alpa', 14, 35);
 
             const siswaList = Object.values(mp.siswa).sort((a, b) => String(a.nis).localeCompare(String(b.nis), undefined, { numeric: true }));
             const siswaData = siswaList.map((s, idx) => {
@@ -448,7 +452,7 @@ const LaporanScreen = () => {
             ]);
 
             autoTable(doc, {
-              startY: 34,
+              startY: 40,
               theme: 'grid',
               head: [columns.map(c => c.header)],
               body,

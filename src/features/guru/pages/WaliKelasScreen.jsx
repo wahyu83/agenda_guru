@@ -324,8 +324,9 @@ const WaliKelasScreen = () => {
     filtered.forEach(session => {
       const mapelId = session.pengampu?.mapel?.id;
       const mapelNama = session.pengampu?.mapel?.nama || '-';
+      const guruNama = session.pengampu?.guru?.nama || '-';
       if (!mapelMap[mapelId]) {
-        mapelMap[mapelId] = { nama: mapelNama, siswa: {} };
+        mapelMap[mapelId] = { nama: mapelNama, guru: guruNama, siswa: {} };
       }
       session.siswaDetail.forEach(d => {
         const sid = d.siswaId;
@@ -357,6 +358,7 @@ const WaliKelasScreen = () => {
 
       mapelList.forEach(mp => {
         csvRows.push([`Mapel: ${mp.nama}`]);
+        csvRows.push([`Guru: ${mp.guru}`]);
         csvRows.push(['No', 'NIS', 'Nama Siswa', 'Hadir', 'Sakit', 'Izin', 'Alpa', 'Persentase', 'Status']);
         const siswaList = Object.values(mp.siswa).sort((a, b) => String(a.nis).localeCompare(String(b.nis), undefined, { numeric: true }));
         siswaList.forEach((s, idx) => {
@@ -382,9 +384,11 @@ const WaliKelasScreen = () => {
           doc.setFontSize(11);
           doc.text(`Kelas: ${kelasNama} — Mapel: ${mp.nama}`, 14, 23);
           doc.setFontSize(10);
-          doc.text(`Wali Kelas: ${user?.nama || '-'}`, 14, 29);
+          doc.text(`Guru: ${mp.guru}`, 14, 29);
+          doc.setFontSize(10);
+          doc.text(`Wali Kelas: ${user?.nama || '-'}`, 14, 35);
           doc.setFontSize(9);
-          doc.text('Keterangan: H=Hadir, S=Sakit, I=Izin, A=Alpa', 14, 35);
+          doc.text('Keterangan: H=Hadir, S=Sakit, I=Izin, A=Alpa', 14, 41);
 
           const siswaList = Object.values(mp.siswa).sort((a, b) => String(a.nis).localeCompare(String(b.nis), undefined, { numeric: true }));
           const siswaData = siswaList.map((s, idx) => {
@@ -408,7 +412,7 @@ const WaliKelasScreen = () => {
           ]);
 
           autoTable(doc, {
-            startY: 40,
+            startY: 46,
             theme: 'grid',
             head: [columns.map(c => c.header)],
             body,
