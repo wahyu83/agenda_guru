@@ -370,7 +370,7 @@ const WaliKelasScreen = () => {
       handleExportCSV(filename, csvRows);
     } else {
       try {
-        const doc = new jsPDF('landscape');
+        const doc = new jsPDF();
         let firstPage = true;
 
         mapelList.forEach(mp => {

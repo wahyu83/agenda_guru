@@ -412,7 +412,7 @@ const LaporanScreen = () => {
       handleExportCSV(filename, csvRows);
     } else {
       try {
-        const doc = new jsPDF('landscape');
+        const doc = new jsPDF();
         let firstPage = true;
         kelasList.forEach(k => {
           Object.values(k.mapel).sort((a, b) => a.nama.localeCompare(b.nama)).forEach(mp => {
