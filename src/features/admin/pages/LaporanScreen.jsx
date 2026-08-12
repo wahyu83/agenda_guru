@@ -396,10 +396,13 @@ const LaporanScreen = () => {
         csvRows.push([]);
         Object.values(k.mapel).sort((a, b) => a.nama.localeCompare(b.nama)).forEach(mp => {
           csvRows.push([`Mapel: ${mp.nama}`]);
-          csvRows.push(['No', 'NIS', 'Nama Siswa', 'Hadir', 'Sakit', 'Izin', 'Alpa']);
+          csvRows.push(['No', 'NIS', 'Nama Siswa', 'Hadir', 'Sakit', 'Izin', 'Alpa', 'Persentase', 'Status']);
           const siswaList = Object.values(mp.siswa).sort((a, b) => String(a.nis).localeCompare(String(b.nis), undefined, { numeric: true }));
           siswaList.forEach((s, idx) => {
-            csvRows.push([idx + 1, s.nis, s.nama, s.H, s.S, s.I, s.A]);
+            const total = s.H + s.S + s.I + s.A;
+            const persentase = total > 0 ? Math.round((s.H / total) * 100) : 0;
+            const warning = persentase < 70 ? '⚠️ PERINGATAN' : '';
+            csvRows.push([idx + 1, s.nis, s.nama, s.H, s.S, s.I, s.A, `${persentase}%`, warning]);
           });
           csvRows.push([]);
         });
@@ -424,6 +427,12 @@ const LaporanScreen = () => {
             doc.text('Keterangan: H=Hadir, S=Sakit, I=Izin, A=Alpa', 14, 29);
 
             const siswaList = Object.values(mp.siswa).sort((a, b) => String(a.nis).localeCompare(String(b.nis), undefined, { numeric: true }));
+            const siswaData = siswaList.map((s, idx) => {
+              const total = s.H + s.S + s.I + s.A;
+              const persentase = total > 0 ? Math.round((s.H / total) * 100) : 0;
+              return { idx, nis: s.nis, nama: s.nama, H: s.H, S: s.S, I: s.I, A: s.A, persentase };
+            });
+
             const columns = [
               { header: 'No', key: 'No' },
               { header: 'NIS', key: 'NIS' },
@@ -431,10 +440,11 @@ const LaporanScreen = () => {
               { header: 'Hadir', key: 'H' },
               { header: 'Sakit', key: 'S' },
               { header: 'Izin', key: 'I' },
-              { header: 'Alpa', key: 'A' }
+              { header: 'Alpa', key: 'A' },
+              { header: 'Persentase', key: 'Persentase' }
             ];
-            const body = siswaList.map((s, idx) => [
-              idx + 1, s.nis, s.nama, s.H, s.S, s.I, s.A
+            const body = siswaData.map(s => [
+              s.idx + 1, s.nis, s.nama, s.H, s.S, s.I, s.A, `${s.persentase}%`
             ]);
 
             autoTable(doc, {
@@ -448,11 +458,23 @@ const LaporanScreen = () => {
               columnStyles: {
                 0: { cellWidth: 10, halign: 'center' },
                 1: { cellWidth: 30, halign: 'center' },
-                2: { halign: 'left', cellWidth: 65 },
-                3: { cellWidth: 20, halign: 'center' },
-                4: { cellWidth: 20, halign: 'center' },
-                5: { cellWidth: 20, halign: 'center' },
-                6: { cellWidth: 20, halign: 'center' }
+                2: { halign: 'left', cellWidth: 55 },
+                3: { cellWidth: 18, halign: 'center' },
+                4: { cellWidth: 18, halign: 'center' },
+                5: { cellWidth: 18, halign: 'center' },
+                6: { cellWidth: 18, halign: 'center' },
+                7: { cellWidth: 22, halign: 'center' }
+              },
+              didParseCell: (hookData) => {
+                if (hookData.section === 'body') {
+                  const rowIndex = hookData.row.index;
+                  const persentase = siswaData[rowIndex]?.persentase ?? 100;
+                  if (persentase < 70) {
+                    hookData.cell.styles.fillColor = [255, 230, 230];
+                    hookData.cell.styles.textColor = [192, 57, 43];
+                    hookData.cell.styles.fontStyle = 'bold';
+                  }
+                }
               }
             });
           });
