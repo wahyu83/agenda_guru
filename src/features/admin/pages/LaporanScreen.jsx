@@ -23,13 +23,18 @@ const LaporanScreen = () => {
     fetchLaporanPiket();
   }, [fetchLaporanAgenda, fetchLaporanAbsensi, fetchLaporanPiket]);
 
+  const extractYearMonth = (dateString) => {
+    if (!dateString) return '';
+    // Supports "2024-01-15T00:00:00.000Z" or "2024-01-15"
+    const datePart = dateString.split('T')[0];
+    return datePart.slice(0, 7); // "2024-01"
+  };
+
   const availableMonths = useMemo(() => {
     const months = new Set();
     [...laporanAgenda, ...laporanAbsensi].forEach(item => {
-      if (item.tanggal) {
-        const d = new Date(item.tanggal);
-        months.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
-      }
+      const ym = extractYearMonth(item.tanggal);
+      if (ym) months.add(ym);
     });
     return Array.from(months).sort();
   }, [laporanAgenda, laporanAbsensi]);
@@ -42,9 +47,7 @@ const LaporanScreen = () => {
 
   const isInMonth = (dateString, monthKey) => {
     if (!monthKey) return true;
-    const d = new Date(dateString);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    return key === monthKey;
+    return extractYearMonth(dateString) === monthKey;
   };
 
   // --- CSV EXPORT LOGIC ---
@@ -224,6 +227,7 @@ const LaporanScreen = () => {
     const groups = {};
     filtered.forEach(session => {
       const pId = session.pengampuId;
+      if (!pId) return;
       if (!groups[pId]) {
         groups[pId] = { pengampu: session.pengampu, sessions: [], siswaMap: new Map() };
       }
@@ -232,9 +236,9 @@ const LaporanScreen = () => {
         rawDate: new Date(session.tanggal).getTime(),
         details: session.siswaDetail
       });
-      session.siswaDetail.forEach(d => {
-        if (!groups[pId].siswaMap.has(d.siswa.id)) {
-          groups[pId].siswaMap.set(d.siswa.id, d.siswa);
+      (session.siswaDetail || []).forEach(d => {
+        if (d.siswa && !groups[pId].siswaMap.has(String(d.siswa.id))) {
+          groups[pId].siswaMap.set(String(d.siswa.id), d.siswa);
         }
       });
     });
@@ -246,10 +250,11 @@ const LaporanScreen = () => {
       const students = Array.from(group.siswaMap.values()).sort((a, b) => String(a.nis).localeCompare(String(b.nis), undefined, { numeric: true }));
       
       const matrixData = students.map((siswa, index) => {
+        const sid = String(siswa.id);
         const row = { No: index + 1, Nama: siswa.nama };
         let h = 0, s = 0, i = 0, a = 0;
         group.sessions.forEach(session => {
-          const detail = session.details.find(d => d.siswaId === siswa.id);
+          const detail = session.details.find(d => String(d.siswaId) === sid);
           const statusChar = detail ? detail.status.charAt(0) : '-';
           row[session.tanggal] = statusChar;
           if (statusChar === 'H') h++;
@@ -265,8 +270,8 @@ const LaporanScreen = () => {
       });
 
       return {
-        kelas: group.pengampu.kelas.nama,
-        mapel: group.pengampu.mapel.nama,
+        kelas: group.pengampu.kelas?.nama || '-',
+        mapel: group.pengampu.mapel?.nama || '-',
         guru: group.pengampu.guru?.nama || '-',
         dates,
         matrixData
