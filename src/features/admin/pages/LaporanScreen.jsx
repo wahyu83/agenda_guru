@@ -357,15 +357,17 @@ const LaporanScreen = () => {
   const exportKehadiranSiswa = (type) => {
     const filtered = laporanAbsensi.filter(s => isInMonth(s.tanggal, selectedMonth));
     const bulanLabel = selectedMonth ? ` - ${formatMonthLabel(selectedMonth)}` : '';
-    const kelasName = selectedKelas ? (kelas.find(k => k.id === selectedKelas)?.nama || selectedKelas) : '';
-    const titleText = `Laporan Kehadiran Per-Siswa${bulanLabel}${kelasName ? ' — Kelas ' + kelasName : ''}`;
-    const kelasLabel = selectedKelas ? '_' + (kelas.find(k => k.id === selectedKelas)?.nama || selectedKelas) : '';
+    const selectedKelasName = selectedKelas ? (kelas.find(k => String(k.id) === String(selectedKelas))?.nama || selectedKelas) : '';
+    const titleText = `Laporan Kehadiran Per-Siswa${bulanLabel}${selectedKelasName ? ' — Kelas ' + selectedKelasName : ''}`;
+    const kelasLabel = selectedKelas ? '_' + selectedKelasName : '';
     const filename = `Laporan_Kehadiran_Per_Siswa${selectedMonth ? '_' + selectedMonth : ''}${kelasLabel}`;
 
     // Group by kelas -> mapel -> siswa
     const kelasMap = {};
     filtered.forEach(session => {
-      const kelasId = session.pengampu?.kelas?.id;
+      const kelasIdRaw = session.pengampu?.kelas?.id;
+      if (!kelasIdRaw) return; // skip sessions without valid class
+      const kelasId = String(kelasIdRaw);
       const kelasNama = session.pengampu?.kelas?.nama || '-';
       const mapelId = session.pengampu?.mapel?.id;
       const mapelNama = session.pengampu?.mapel?.nama || '-';
@@ -392,7 +394,7 @@ const LaporanScreen = () => {
 
     let kelasList = Object.values(kelasMap).sort((a, b) => a.nama.localeCompare(b.nama));
     if (selectedKelas) {
-      kelasList = kelasList.filter(k => k.id === selectedKelas);
+      kelasList = kelasList.filter(k => k.id === String(selectedKelas));
     }
 
     if (type === 'csv') {
