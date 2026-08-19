@@ -14,6 +14,7 @@ const LaporanScreen = () => {
   const { guru, mapel, kelas, siswa, tahunPelajaran, laporanAgenda, laporanAbsensi, laporanPiket, fetchLaporanAgenda, fetchLaporanAbsensi, fetchLaporanPiket } = useAppStore();
   const tahunAktif = tahunPelajaran.find(t => t.isActive);
   const [selectedMonth, setSelectedMonth] = useState('');
+  const [selectedKelas, setSelectedKelas] = useState('');
   const [selectedPiketDate, setSelectedPiketDate] = useState('');
 
   React.useEffect(() => {
@@ -356,8 +357,10 @@ const LaporanScreen = () => {
   const exportKehadiranSiswa = (type) => {
     const filtered = laporanAbsensi.filter(s => isInMonth(s.tanggal, selectedMonth));
     const bulanLabel = selectedMonth ? ` - ${formatMonthLabel(selectedMonth)}` : '';
-    const titleText = `Laporan Kehadiran Per-Siswa${bulanLabel}`;
-    const filename = `Laporan_Kehadiran_Per_Siswa${selectedMonth ? '_' + selectedMonth : ''}`;
+    const kelasName = selectedKelas ? (kelas.find(k => k.id === selectedKelas)?.nama || selectedKelas) : '';
+    const titleText = `Laporan Kehadiran Per-Siswa${bulanLabel}${kelasName ? ' — Kelas ' + kelasName : ''}`;
+    const kelasLabel = selectedKelas ? '_' + (kelas.find(k => k.id === selectedKelas)?.nama || selectedKelas) : '';
+    const filename = `Laporan_Kehadiran_Per_Siswa${selectedMonth ? '_' + selectedMonth : ''}${kelasLabel}`;
 
     // Group by kelas -> mapel -> siswa
     const kelasMap = {};
@@ -367,7 +370,7 @@ const LaporanScreen = () => {
       const mapelId = session.pengampu?.mapel?.id;
       const mapelNama = session.pengampu?.mapel?.nama || '-';
       if (!kelasMap[kelasId]) {
-        kelasMap[kelasId] = { nama: kelasNama, mapel: {} };
+        kelasMap[kelasId] = { id: kelasId, nama: kelasNama, mapel: {} };
       }
       const guruNama = session.pengampu?.guru?.nama || '-';
       if (!kelasMap[kelasId].mapel[mapelId]) {
@@ -387,7 +390,10 @@ const LaporanScreen = () => {
       });
     });
 
-    const kelasList = Object.values(kelasMap).sort((a, b) => a.nama.localeCompare(b.nama));
+    let kelasList = Object.values(kelasMap).sort((a, b) => a.nama.localeCompare(b.nama));
+    if (selectedKelas) {
+      kelasList = kelasList.filter(k => k.id === selectedKelas);
+    }
 
     if (type === 'csv') {
       let csvRows = [];
@@ -653,11 +659,34 @@ const LaporanScreen = () => {
             <X size={14} /> Reset
           </button>
         )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+          <Filter size={16} style={{ color: 'var(--text-muted)' }} />
+          <label style={{ fontSize: '0.875rem', fontWeight: '500' }}>Filter Kelas:</label>
+        </div>
+        <select
+          className="input"
+          style={{ width: 'auto', minWidth: '200px' }}
+          value={selectedKelas}
+          onChange={(e) => setSelectedKelas(e.target.value)}
+        >
+          <option value="">Semua Kelas</option>
+          {kelas.map(k => (
+            <option key={k.id} value={k.id}>{k.nama}</option>
+          ))}
+        </select>
+        {selectedKelas && (
+          <button
+            onClick={() => setSelectedKelas('')}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8125rem' }}
+          >
+            <X size={14} /> Reset
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <ReportCard 
-          title="Jurnal Agenda Guru" 
+        <ReportCard
+          title="Jurnal Agenda Guru"
           description="Rekap catatan jurnal mengajar guru selama satu semester."
           onPdf={() => exportAgenda('pdf')}
           onCsv={() => exportAgenda('csv')}
