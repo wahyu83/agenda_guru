@@ -58,6 +58,7 @@ const AbsensiEditScreen = () => {
     'Sakit': { bg: 'var(--info)', text: 'white' },
     'Izin': { bg: 'var(--warning)', text: 'white' },
     'Alpa': { bg: 'var(--danger)', text: 'white' },
+    'Terlambat': { bg: 'var(--primary)', text: 'white' },
   };
 
   if (!absensiHeader) return <div className="p-4 text-center text-muted">Memuat data...</div>;
@@ -99,7 +100,7 @@ const AbsensiEditScreen = () => {
               </div>
             </div>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              {['Hadir', 'Sakit', 'Izin', 'Alpa'].map(status => (
+              {['Hadir', 'Sakit', 'Izin', 'Alpa', 'Terlambat'].map(status => (
                 <button
                   key={status}
                   onClick={() => updateStatus(s.id, status)}

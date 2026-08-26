@@ -46,7 +46,7 @@ const RiwayatScreen = () => {
       session.siswaDetail.forEach(d => {
         const sid = d.siswaId;
         if (!map[kelasId].mapel[pId].siswaMap.has(sid)) {
-          map[kelasId].mapel[pId].siswaMap.set(sid, { id: sid, nama: d.siswa.nama, nis: d.siswa.nis, H: 0, S: 0, I: 0, A: 0 });
+          map[kelasId].mapel[pId].siswaMap.set(sid, { id: sid, nama: d.siswa.nama, nis: d.siswa.nis, H: 0, S: 0, I: 0, A: 0, T: 0 });
         }
         const s = d.status?.charAt(0);
         const siswa = map[kelasId].mapel[pId].siswaMap.get(sid);
@@ -54,6 +54,7 @@ const RiwayatScreen = () => {
         else if (s === 'S') siswa.S++;
         else if (s === 'I') siswa.I++;
         else if (s === 'A') siswa.A++;
+        else if (s === 'T') siswa.T++;
       });
     });
     return Object.values(map).sort((a, b) => a.nama.localeCompare(b.nama));
@@ -166,7 +167,7 @@ const RiwayatScreen = () => {
       const students = Array.from(group.siswaMap.values()).sort((a, b) => String(a.nis).localeCompare(String(b.nis), undefined, { numeric: true }));
       const matrixData = students.map((siswa, index) => {
         const row = { No: index + 1, Nama: siswa.nama };
-        let h = 0, s = 0, i = 0, a = 0;
+        let h = 0, s = 0, i = 0, a = 0, t = 0;
         group.sessions.forEach(session => {
           const detail = session.details.find(d => d.siswaId === siswa.id);
           const statusChar = detail ? detail.status.charAt(0) : '-';
@@ -175,11 +176,13 @@ const RiwayatScreen = () => {
           if (statusChar === 'S') s++;
           if (statusChar === 'I') i++;
           if (statusChar === 'A') a++;
+          if (statusChar === 'T') t++;
         });
         row['H'] = h;
         row['S'] = s;
         row['I'] = i;
         row['A'] = a;
+        row['T'] = t;
         return row;
       });
       return { kelas: group.pengampu.kelas.nama, mapel: group.pengampu.mapel.nama, guru: user?.nama || '-', dates, matrixData };
@@ -190,14 +193,14 @@ const RiwayatScreen = () => {
       matrices.forEach(m => {
         csvRows.push(['Buku Rekapitulasi Absensi Kelas']);
         csvRows.push([`Kelas: ${m.kelas}    Mapel: ${m.mapel}    Guru: ${m.guru}`]);
-        csvRows.push(['Keterangan: H=Hadir, S=Sakit, I=Izin, A=Alpa']);
+        csvRows.push(['Keterangan: H=Hadir, S=Sakit, I=Izin, A=Alpa, T=Terlambat']);
         csvRows.push([]);
-        const headerRow = ['No', 'Nama Siswa', ...m.dates, 'H', 'S', 'I', 'A'];
+        const headerRow = ['No', 'Nama Siswa', ...m.dates, 'H', 'S', 'I', 'A', 'T'];
         csvRows.push(headerRow);
         m.matrixData.forEach(row => {
           const dataRow = [row.No, row.Nama];
           m.dates.forEach(date => { dataRow.push(row[date] || '-'); });
-          dataRow.push(row.H, row.S, row.I, row.A);
+          dataRow.push(row.H, row.S, row.I, row.A, row.T);
           csvRows.push(dataRow);
         });
         csvRows.push([]);
@@ -213,7 +216,7 @@ const RiwayatScreen = () => {
           doc.text('Buku Rekapitulasi Absensi Kelas', 14, 15);
           doc.setFontSize(10);
           doc.text(`Kelas: ${m.kelas}    Mapel: ${m.mapel}    Guru: ${m.guru}`, 14, 22);
-          doc.text('Keterangan: H=Hadir, S=Sakit, I=Izin, A=Alpa', 14, 27);
+          doc.text('Keterangan: H=Hadir, S=Sakit, I=Izin, A=Alpa, T=Terlambat', 14, 27);
           const columns = [
             { header: 'No', key: 'No' },
             { header: 'Nama Siswa', key: 'Nama' },
@@ -221,7 +224,8 @@ const RiwayatScreen = () => {
             { header: 'H', key: 'H' },
             { header: 'S', key: 'S' },
             { header: 'I', key: 'I' },
-            { header: 'A', key: 'A' }
+            { header: 'A', key: 'A' },
+            { header: 'T', key: 'T' }
           ];
           autoTable(doc, {
             startY: 32,
@@ -492,13 +496,14 @@ const RiwayatScreen = () => {
                       const totalS = siswaList.reduce((sum, s) => sum + s.S, 0);
                       const totalI = siswaList.reduce((sum, s) => sum + s.I, 0);
                       const totalA = siswaList.reduce((sum, s) => sum + s.A, 0);
+                      const totalT = siswaList.reduce((sum, s) => sum + s.T, 0);
                       return (
                         <div key={pId} className="card" style={{ overflow: 'hidden', marginBottom: '1rem' }}>
                           <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--surface-hover)' }}>
                             <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                               <Users size={16} /> {kelas.nama} — {mp.mapel}
                             </h3>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.7rem', marginTop: '0.25rem' }}>H=Hadir, S=Sakit, I=Izin, A=Alpa</p>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.7rem', marginTop: '0.25rem' }}>H=Hadir, S=Sakit, I=Izin, A=Alpa, T=Terlambat</p>
                           </div>
                           <div style={{ overflowX: 'auto' }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
@@ -510,6 +515,7 @@ const RiwayatScreen = () => {
                                   <th style={{ padding: '0.5rem', color: 'var(--warning)', fontWeight: '600', textAlign: 'center' }}>Sakit</th>
                                   <th style={{ padding: '0.5rem', color: 'var(--info)', fontWeight: '600', textAlign: 'center' }}>Izin</th>
                                   <th style={{ padding: '0.5rem', color: 'var(--danger)', fontWeight: '600', textAlign: 'center' }}>Alpa</th>
+                                  <th style={{ padding: '0.5rem', color: 'var(--primary)', fontWeight: '600', textAlign: 'center' }}>Terlambat</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -521,6 +527,7 @@ const RiwayatScreen = () => {
                                     <td style={{ padding: '0.5rem', textAlign: 'center', fontWeight: '600', color: 'var(--warning)' }}>{siswa.S}</td>
                                     <td style={{ padding: '0.5rem', textAlign: 'center', fontWeight: '600', color: 'var(--info)' }}>{siswa.I}</td>
                                     <td style={{ padding: '0.5rem', textAlign: 'center', fontWeight: '600', color: 'var(--danger)' }}>{siswa.A}</td>
+                                    <td style={{ padding: '0.5rem', textAlign: 'center', fontWeight: '600', color: 'var(--primary)' }}>{siswa.T}</td>
                                   </tr>
                                 ))}
                               </tbody>
@@ -531,6 +538,7 @@ const RiwayatScreen = () => {
                                   <td style={{ padding: '0.5rem', textAlign: 'center', color: 'var(--warning)' }}>{totalS}</td>
                                   <td style={{ padding: '0.5rem', textAlign: 'center', color: 'var(--info)' }}>{totalI}</td>
                                   <td style={{ padding: '0.5rem', textAlign: 'center', color: 'var(--danger)' }}>{totalA}</td>
+                                  <td style={{ padding: '0.5rem', textAlign: 'center', color: 'var(--primary)' }}>{totalT}</td>
                                 </tr>
                               </tfoot>
                             </table>

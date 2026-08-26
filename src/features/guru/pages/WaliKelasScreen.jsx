@@ -203,7 +203,7 @@ const WaliKelasScreen = () => {
 
       const matrixData = students.map((siswa, index) => {
         const row = { No: index + 1, Nama: siswa.nama };
-        let h = 0, s = 0, i = 0, a = 0;
+        let h = 0, s = 0, i = 0, a = 0, t = 0;
         group.sessions.forEach(session => {
           const detail = session.details.find(d => d.siswaId === siswa.id);
           const statusChar = detail ? detail.status.charAt(0) : '-';
@@ -212,11 +212,13 @@ const WaliKelasScreen = () => {
           if (statusChar === 'S') s++;
           if (statusChar === 'I') i++;
           if (statusChar === 'A') a++;
+          if (statusChar === 'T') t++;
         });
         row['H'] = h;
         row['S'] = s;
         row['I'] = i;
         row['A'] = a;
+        row['T'] = t;
         return row;
       });
 
@@ -237,10 +239,10 @@ const WaliKelasScreen = () => {
         csvRows.push([titleText]);
         csvRows.push([`Kelas: ${m.kelas}    Mapel: ${m.mapel}    Guru: ${m.guru}`]);
         csvRows.push([`Wali Kelas: ${user?.nama || '-'}`]);
-        csvRows.push(['Keterangan: H=Hadir, S=Sakit, I=Izin, A=Alpa']);
+        csvRows.push(['Keterangan: H=Hadir, S=Sakit, I=Izin, A=Alpa, T=Terlambat']);
         csvRows.push([]);
 
-        const headerRow = ['No', 'Nama Siswa', ...m.dates, 'H', 'S', 'I', 'A'];
+        const headerRow = ['No', 'Nama Siswa', ...m.dates, 'H', 'S', 'I', 'A', 'T'];
         csvRows.push(headerRow);
 
         m.matrixData.forEach(row => {
@@ -248,7 +250,7 @@ const WaliKelasScreen = () => {
           m.dates.forEach(date => {
             dataRow.push(row[date] || '-');
           });
-          dataRow.push(row.H, row.S, row.I, row.A);
+          dataRow.push(row.H, row.S, row.I, row.A, row.T);
           csvRows.push(dataRow);
         });
 
@@ -269,7 +271,7 @@ const WaliKelasScreen = () => {
           doc.setFontSize(10);
           doc.text(`Kelas: ${m.kelas}    Mapel: ${m.mapel}    Guru: ${m.guru}`, 14, 22);
           doc.text(`Wali Kelas: ${user?.nama || '-'}`, 14, 27);
-          doc.text('Keterangan: H=Hadir, S=Sakit, I=Izin, A=Alpa', 14, 32);
+          doc.text('Keterangan: H=Hadir, S=Sakit, I=Izin, A=Alpa, T=Terlambat', 14, 32);
 
           const columns = [
             { header: 'No', key: 'No' },
@@ -278,7 +280,8 @@ const WaliKelasScreen = () => {
             { header: 'H', key: 'H' },
             { header: 'S', key: 'S' },
             { header: 'I', key: 'I' },
-            { header: 'A', key: 'A' }
+            { header: 'A', key: 'A' },
+            { header: 'T', key: 'T' }
           ];
 
           autoTable(doc, {
@@ -331,7 +334,7 @@ const WaliKelasScreen = () => {
       session.siswaDetail.forEach(d => {
         const sid = d.siswaId;
         if (!mapelMap[mapelId].siswa[sid]) {
-          mapelMap[mapelId].siswa[sid] = { id: sid, nama: d.siswa.nama, nis: d.siswa.nis, H: 0, S: 0, I: 0, A: 0 };
+          mapelMap[mapelId].siswa[sid] = { id: sid, nama: d.siswa.nama, nis: d.siswa.nis, H: 0, S: 0, I: 0, A: 0, T: 0 };
         }
         const s = d.status?.charAt(0);
         const siswa = mapelMap[mapelId].siswa[sid];
@@ -339,6 +342,7 @@ const WaliKelasScreen = () => {
         else if (s === 'S') siswa.S++;
         else if (s === 'I') siswa.I++;
         else if (s === 'A') siswa.A++;
+        else if (s === 'T') siswa.T++;
       });
     });
 
@@ -359,13 +363,13 @@ const WaliKelasScreen = () => {
       mapelList.forEach(mp => {
         csvRows.push([`Mapel: ${mp.nama}`]);
         csvRows.push([`Guru: ${mp.guru}`]);
-        csvRows.push(['No', 'NIS', 'Nama Siswa', 'Hadir', 'Sakit', 'Izin', 'Alpa', 'Persentase', 'Status']);
+        csvRows.push(['No', 'NIS', 'Nama Siswa', 'Hadir', 'Sakit', 'Izin', 'Alpa', 'Terlambat', 'Persentase', 'Status']);
         const siswaList = Object.values(mp.siswa).sort((a, b) => String(a.nis).localeCompare(String(b.nis), undefined, { numeric: true }));
         siswaList.forEach((s, idx) => {
-          const total = s.H + s.S + s.I + s.A;
+          const total = s.H + s.S + s.I + s.A + s.T;
           const persentase = total > 0 ? Math.round((s.H / total) * 100) : 0;
           const warning = persentase < 70 ? '⚠️ PERINGATAN' : '';
-          csvRows.push([idx + 1, s.nis, s.nama, s.H, s.S, s.I, s.A, `${persentase}%`, warning]);
+          csvRows.push([idx + 1, s.nis, s.nama, s.H, s.S, s.I, s.A, s.T, `${persentase}%`, warning]);
         });
         csvRows.push([]);
       });
@@ -388,13 +392,13 @@ const WaliKelasScreen = () => {
           doc.setFontSize(10);
           doc.text(`Wali Kelas: ${user?.nama || '-'}`, 14, 35);
           doc.setFontSize(9);
-          doc.text('Keterangan: H=Hadir, S=Sakit, I=Izin, A=Alpa', 14, 41);
+          doc.text('Keterangan: H=Hadir, S=Sakit, I=Izin, A=Alpa, T=Terlambat', 14, 41);
 
           const siswaList = Object.values(mp.siswa).sort((a, b) => String(a.nis).localeCompare(String(b.nis), undefined, { numeric: true }));
           const siswaData = siswaList.map((s, idx) => {
-            const total = s.H + s.S + s.I + s.A;
+            const total = s.H + s.S + s.I + s.A + s.T;
             const persentase = total > 0 ? Math.round((s.H / total) * 100) : 0;
-            return { idx, nis: s.nis, nama: s.nama, H: s.H, S: s.S, I: s.I, A: s.A, persentase };
+            return { idx, nis: s.nis, nama: s.nama, H: s.H, S: s.S, I: s.I, A: s.A, T: s.T, persentase };
           });
 
           const columns = [
@@ -405,10 +409,11 @@ const WaliKelasScreen = () => {
             { header: 'Sakit', key: 'S' },
             { header: 'Izin', key: 'I' },
             { header: 'Alpa', key: 'A' },
+            { header: 'Terlambat', key: 'T' },
             { header: 'Persentase', key: 'Persentase' }
           ];
           const body = siswaData.map(s => [
-            s.idx + 1, s.nis, s.nama, s.H, s.S, s.I, s.A, `${s.persentase}%`
+            s.idx + 1, s.nis, s.nama, s.H, s.S, s.I, s.A, s.T, `${s.persentase}%`
           ]);
 
           autoTable(doc, {
@@ -416,18 +421,19 @@ const WaliKelasScreen = () => {
             theme: 'grid',
             head: [columns.map(c => c.header)],
             body,
-            styles: { fontSize: 9, cellPadding: 2 },
-            headStyles: { fillColor: [43, 62, 80], halign: 'center' },
+            styles: { fontSize: 9, cellPadding: 1.5 },
+            headStyles: { fillColor: [43, 62, 80], halign: 'center', fontSize: 8 },
             bodyStyles: { halign: 'center' },
             columnStyles: {
-              0: { cellWidth: 10, halign: 'center' },
-              1: { cellWidth: 30, halign: 'center' },
-              2: { halign: 'left', cellWidth: 55 },
-              3: { cellWidth: 18, halign: 'center' },
-              4: { cellWidth: 18, halign: 'center' },
-              5: { cellWidth: 18, halign: 'center' },
-              6: { cellWidth: 18, halign: 'center' },
-              7: { cellWidth: 22, halign: 'center' }
+              0: { cellWidth: 8, halign: 'center' },
+              1: { cellWidth: 22, halign: 'center' },
+              2: { halign: 'left', cellWidth: 42 },
+              3: { cellWidth: 12, halign: 'center' },
+              4: { cellWidth: 12, halign: 'center' },
+              5: { cellWidth: 12, halign: 'center' },
+              6: { cellWidth: 12, halign: 'center' },
+              7: { cellWidth: 20, halign: 'center' },
+              8: { cellWidth: 18, halign: 'center' }
             },
             didParseCell: (hookData) => {
               if (hookData.section === 'body') {
