@@ -145,6 +145,7 @@ router.post('/mapel/batch', async (req, res) => {
 // --- KELAS ---
 router.get('/kelas', async (req, res) => {
   const data = await prisma.kelas.findMany({ 
+    orderBy: { nama: 'asc' },
     include: { 
       tahunPelajaran: true,
       waliKelas: { select: { id: true, nama: true, nip: true } },
