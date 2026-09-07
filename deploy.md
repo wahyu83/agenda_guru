@@ -119,17 +119,23 @@ Kita akan mengatur Nginx agar *Frontend* bisa diakses melalui port 80 (HTTP) dan
            try_files $uri $uri/ /index.html;
        }
 
-       # Backend (Reverse Proxy ke PM2)
-       location /api/ {
-           proxy_pass http://127.0.0.1:3000;
-           proxy_http_version 1.1;
-           proxy_set_header Upgrade $http_upgrade;
-           proxy_set_header Connection 'upgrade';
-           proxy_set_header Host $host;
-           proxy_cache_bypass $http_upgrade;
-       }
-   }
-   ```
+# Backend (Reverse Proxy ke PM2)
+        location /api/ {
+            proxy_pass http://127.0.0.1:3000;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection 'upgrade';
+            proxy_set_header Host $host;
+            proxy_cache_bypass $http_upgrade;
+        }
+
+        # File upload (logo sekolah, dsb.) — diteruskan ke backend
+        location /uploads/ {
+            proxy_pass http://127.0.0.1:3000;
+            proxy_set_header Host $host;
+        }
+    }
+    ```
 3. Aktifkan konfigurasi dan *Restart* Nginx:
    ```bash
    sudo ln -s /etc/nginx/sites-available/agenda-guru /etc/nginx/sites-enabled/
