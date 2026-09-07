@@ -11,7 +11,7 @@ const MONTHS = [
 ];
 
 const LaporanScreen = () => {
-  const { guru, mapel, kelas, siswa, tahunPelajaran, laporanAgenda, laporanAbsensi, laporanPiket, fetchLaporanAgenda, fetchLaporanAbsensi, fetchLaporanPiket } = useAppStore();
+  const { guru, mapel, kelas, siswa, tahunPelajaran, laporanAgenda, laporanAbsensi, laporanPiket, settings, fetchLaporanAgenda, fetchLaporanAbsensi, fetchLaporanPiket } = useAppStore();
   const tahunAktif = tahunPelajaran.find(t => t.isActive);
   const [selectedMonth, setSelectedMonth] = useState('');
   const [selectedKelas, setSelectedKelas] = useState('');
@@ -68,8 +68,8 @@ const LaporanScreen = () => {
   const handleExportCSVWithHeader = (filename, title, columns, data) => {
     let csvRows = [];
     // Kop Sekolah
-    csvRows.push(['SMK NEGERI 1 ARAHAN']);
-    csvRows.push(['Jl. Raya Arahan, Kabupaten Indramayu, Jawa Barat']);
+    csvRows.push([settings.namaSekolah]);
+    csvRows.push([settings.alamat]);
     csvRows.push([]); // Separator
     csvRows.push([title]);
     csvRows.push([]); // Separator
@@ -83,15 +83,43 @@ const LaporanScreen = () => {
   };
 
   // --- PDF EXPORT LOGIC ---
-  const handleExportPDF = (filename, title, columns, data) => {
+  const loadLogoDataUrl = async () => {
+    if (!settings.logoPath) return null;
     try {
+      const res = await fetch(settings.logoPath);
+      const blob = await res.blob();
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (e) {
+      console.error("Gagal memuat logo:", e);
+      return null;
+    }
+  };
+
+  const handleExportPDF = async (filename, title, columns, data) => {
+    try {
+      const logoDataUrl = await loadLogoDataUrl();
       const doc = new jsPDF();
       
       // Header Kop Sekolah (Simple Text Version)
+      const logoX = settings.logoPath ? 14 : 0;
+      if (logoDataUrl) {
+        try {
+          doc.addImage(logoDataUrl, 'PNG', 14, 10, 16, 16);
+        } catch (e) {
+          console.warn("Logo gagal dimasukkan ke PDF:", e);
+        }
+      }
+      const textX = settings.logoPath ? 34 : 105;
+      const titleAlign = settings.logoPath ? 'left' : 'center';
       doc.setFontSize(16);
-      doc.text('SMK NEGERI 1 ARAHAN', 105, 15, { align: 'center' });
+      doc.text(settings.namaSekolah, textX, 15, { align: titleAlign });
       doc.setFontSize(10);
-      doc.text('Jl. Raya Arahan, Kabupaten Indramayu, Jawa Barat', 105, 22, { align: 'center' });
+      doc.text(settings.alamat, textX, 22, { align: titleAlign });
       doc.line(14, 25, 196, 25);
       
       // Title
@@ -547,8 +575,8 @@ const LaporanScreen = () => {
 
     if (type === 'xls') {
       let csvRows = [];
-      csvRows.push(['SMK NEGERI 1 ARAHAN']);
-      csvRows.push(['Jl. Raya Arahan, Kabupaten Indramayu, Jawa Barat']);
+      csvRows.push([settings.namaSekolah]);
+      csvRows.push([settings.alamat]);
       csvRows.push([]);
       csvRows.push([title]);
       csvRows.push([]);
@@ -571,9 +599,9 @@ const LaporanScreen = () => {
       try {
         const doc = new jsPDF();
         doc.setFontSize(16);
-        doc.text('SMK NEGERI 1 ARAHAN', 105, 15, { align: 'center' });
+        doc.text(settings.namaSekolah, 105, 15, { align: 'center' });
         doc.setFontSize(10);
-        doc.text('Jl. Raya Arahan, Kabupaten Indramayu, Jawa Barat', 105, 22, { align: 'center' });
+        doc.text(settings.alamat, 105, 22, { align: 'center' });
         doc.line(14, 25, 196, 25);
         doc.setFontSize(14);
         doc.text(title, 14, 35);

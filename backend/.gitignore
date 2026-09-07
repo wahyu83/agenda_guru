@@ -3,3 +3,6 @@ node_modules
 .env
 
 /generated/prisma
+
+# User-uploaded files (school logo, etc.) — runtime data, not source
+uploads/

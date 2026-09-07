@@ -6,11 +6,15 @@ import arahanImg from '../../../arahan.jpg';
 
 const LoginScreen = () => {
   const navigate = useNavigate();
-  const { user, setUser } = useAppStore();
+  const { user, settings, setUser, fetchSettings } = useAppStore();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
   useEffect(() => {
     if (user) {
@@ -69,10 +73,10 @@ const LoginScreen = () => {
     }}>
       <div className="glass card animate-fade-in" style={{ width: '100%', maxWidth: '400px', padding: '2rem' }}>
         <div className="flex flex-col items-center justify-center gap-2" style={{ marginBottom: '2rem' }}>
-          <img src={arahanImg} alt="SMKN 1 Arahan" style={{ width: '80px', height: '80px', borderRadius: 'var(--radius-md)', objectFit: 'cover' }} />
+          <img src={settings.logoPath || arahanImg} alt={settings.namaSekolah} style={{ width: '80px', height: '80px', borderRadius: 'var(--radius-md)', objectFit: 'cover' }} />
           <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', textAlign: 'center', lineHeight: '1.2' }}>
             Agenda Guru <br />
-            <span style={{ fontSize: '1rem', fontWeight: '500', color: 'var(--primary)' }}>SMKN 1 Arahan</span>
+            <span style={{ fontSize: '1rem', fontWeight: '500', color: 'var(--primary)' }}>{settings.namaSekolah}</span>
           </h1>
 
 

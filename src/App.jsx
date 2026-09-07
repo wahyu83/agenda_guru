@@ -18,6 +18,8 @@ import KelasScreen from './features/admin/pages/KelasScreen';
 import SiswaScreen from './features/admin/pages/SiswaScreen';
 import LaporanScreen from './features/admin/pages/LaporanScreen';
 import JamPelajaranScreen from './features/admin/pages/JamPelajaranScreen';
+import SettingsScreen from './features/admin/pages/SettingsScreen';
+import BackupScreen from './features/admin/pages/BackupScreen';
 
 // Guru Pages
 import GuruDashboard from './features/guru/pages/GuruDashboard';
@@ -38,10 +40,17 @@ import IzinSiswaScreen from './features/piket/IzinSiswaScreen';
 
 function App() {
   const fetchMasterData = useAppStore((state) => state.fetchMasterData);
+  const fetchSettings = useAppStore((state) => state.fetchSettings);
+  const settings = useAppStore((state) => state.settings);
 
   useEffect(() => {
     fetchMasterData();
-  }, [fetchMasterData]);
+    fetchSettings();
+  }, [fetchMasterData, fetchSettings]);
+
+  useEffect(() => {
+    document.title = `Agenda Guru ${settings?.namaSekolah || ''}`.trim();
+  }, [settings?.namaSekolah]);
 
   return (
     <Router>
@@ -62,6 +71,8 @@ function App() {
           <Route path="siswa" element={<SiswaScreen />} />
           <Route path="laporan" element={<LaporanScreen />} />
           <Route path="jam-pelajaran" element={<JamPelajaranScreen />} />
+          <Route path="settings" element={<SettingsScreen />} />
+          <Route path="backup" element={<BackupScreen />} />
         </Route>
 
         {/* Guru Routes */}

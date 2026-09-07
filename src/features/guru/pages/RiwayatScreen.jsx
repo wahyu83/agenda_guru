@@ -8,7 +8,7 @@ import autoTable from 'jspdf-autotable';
 
 const RiwayatScreen = () => {
   const navigate = useNavigate();
-  const { user, riwayatGuru, fetchRiwayatGuru, updateAgenda, deleteAgenda, deleteAbsensi, updateNilai, deleteNilai, fetchRiwayatNilai } = useAppStore();
+  const { user, riwayatGuru, settings, fetchRiwayatGuru, updateAgenda, deleteAgenda, deleteAbsensi, updateNilai, deleteNilai, fetchRiwayatNilai } = useAppStore();
   const [activeTab, setActiveTab] = useState('agenda');
   
   // Modal Edit Agenda State
@@ -79,8 +79,8 @@ const RiwayatScreen = () => {
   // --- CSV WITH HEADER ---
   const handleExportCSVWithHeader = (filename, title, columns, data) => {
     let csvRows = [];
-    csvRows.push(['SMK NEGERI 1 ARAHAN']);
-    csvRows.push(['Jl. Raya Arahan, Kabupaten Indramayu, Jawa Barat']);
+    csvRows.push([settings.namaSekolah]);
+    csvRows.push([settings.alamat]);
     csvRows.push([]);
     csvRows.push([title]);
     csvRows.push([`Guru: ${user?.nama || '-'}`]);
@@ -97,9 +97,9 @@ const RiwayatScreen = () => {
     try {
       const doc = new jsPDF();
       doc.setFontSize(16);
-      doc.text('SMK NEGERI 1 ARAHAN', 105, 15, { align: 'center' });
+      doc.text(settings.namaSekolah, 105, 15, { align: 'center' });
       doc.setFontSize(10);
-      doc.text('Jl. Raya Arahan, Kabupaten Indramayu, Jawa Barat', 105, 22, { align: 'center' });
+      doc.text(settings.alamat, 105, 22, { align: 'center' });
       doc.line(14, 25, 196, 25);
       doc.setFontSize(14);
       doc.text(title, 14, 35);
@@ -296,8 +296,8 @@ const RiwayatScreen = () => {
     if (type === 'csv') {
       let csvRows = [];
       matrices.forEach(m => {
-        csvRows.push(['SMK NEGERI 1 ARAHAN']);
-        csvRows.push(['Jl. Raya Arahan, Kabupaten Indramayu, Jawa Barat']);
+        csvRows.push([settings.namaSekolah]);
+        csvRows.push([settings.alamat]);
         csvRows.push([]);
         csvRows.push(['Rekap Nilai Siswa']);
         csvRows.push([`Kelas: ${m.kelas}    Mapel: ${m.mapel}    Guru: ${user?.nama || '-'}`]);

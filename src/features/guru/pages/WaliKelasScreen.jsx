@@ -11,7 +11,7 @@ const MONTHS = [
 ];
 
 const WaliKelasScreen = () => {
-  const { user, kelasWali, laporanKelas, fetchWaliKelas, fetchLaporanKelas } = useAppStore();
+  const { user, kelasWali, laporanKelas, settings, fetchWaliKelas, fetchLaporanKelas } = useAppStore();
   const [selectedKelasId, setSelectedKelasId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState('');
@@ -120,8 +120,8 @@ const WaliKelasScreen = () => {
 
     if (type === 'csv') {
       let csvRows = [];
-      csvRows.push(['SMK NEGERI 1 ARAHAN']);
-      csvRows.push(['Jl. Raya Arahan, Kabupaten Indramayu, Jawa Barat']);
+      csvRows.push([settings.namaSekolah]);
+      csvRows.push([settings.alamat]);
       csvRows.push([]);
       csvRows.push([title]);
       csvRows.push([`Wali Kelas: ${user?.nama || '-'}`]);
@@ -135,9 +135,9 @@ const WaliKelasScreen = () => {
       try {
         const doc = new jsPDF();
         doc.setFontSize(16);
-        doc.text('SMK NEGERI 1 ARAHAN', 105, 15, { align: 'center' });
+        doc.text(settings.namaSekolah, 105, 15, { align: 'center' });
         doc.setFontSize(10);
-        doc.text('Jl. Raya Arahan, Kabupaten Indramayu, Jawa Barat', 105, 22, { align: 'center' });
+        doc.text(settings.alamat, 105, 22, { align: 'center' });
         doc.line(14, 25, 196, 25);
         doc.setFontSize(14);
         doc.text(title, 14, 35);
@@ -352,8 +352,8 @@ const WaliKelasScreen = () => {
 
     if (type === 'csv') {
       let csvRows = [];
-      csvRows.push(['SMK NEGERI 1 ARAHAN']);
-      csvRows.push(['Jl. Raya Arahan, Kabupaten Indramayu, Jawa Barat']);
+      csvRows.push([settings.namaSekolah]);
+      csvRows.push([settings.alamat]);
       csvRows.push([]);
       csvRows.push([titleText]);
       csvRows.push([`Kelas: ${kelasNama}`]);

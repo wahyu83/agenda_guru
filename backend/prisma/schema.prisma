@@ -182,3 +182,11 @@ model Piket {
 
   @@unique([pengampuId, tanggal])
 }
+
+model SchoolSettings {
+  id          Int     @id @default(1)
+  namaSekolah String  @default("SMK NEGERI 1 ARAHAN")
+  alamat      String  @default("Jl. Raya Arahan, Kabupaten Indramayu, Jawa Barat")
+  logoPath    String?
+  updatedAt   DateTime @updatedAt
+}

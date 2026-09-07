@@ -20,6 +20,7 @@ export const useAppStore = create((set, get) => ({
   laporanKelas: { agenda: [], absensi: [] },
   nilaiKelas: { nilai: [], pengampu: [] },
   jamPelajaran: [],
+  settings: { namaSekolah: 'SMK NEGERI 1 ARAHAN', alamat: 'Jl. Raya Arahan, Kabupaten Indramayu, Jawa Barat', logoPath: null },
   user: JSON.parse(localStorage.getItem('user')) || null,
 
   setUser: (userData) => set({ user: userData }),
@@ -44,6 +45,54 @@ export const useAppStore = create((set, get) => ({
     } catch (err) {
       console.error("Gagal mengambil master data:", err);
     }
+  },
+
+  // --- PENGATURAN SEKOLAH ---
+  fetchSettings: async () => {
+    try {
+      const res = await fetch(`${API_BASE}/admin/settings`);
+      const data = await res.json();
+      if (data && !data.error) {
+        set({ settings: { ...data, logoPath: data.logoPath || null } });
+      }
+    } catch (err) {
+      console.error("Gagal mengambil pengaturan sekolah:", err);
+    }
+  },
+
+  saveSettings: async (namaSekolah, alamat) => {
+    const res = await fetch(`${API_BASE}/admin/settings`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ namaSekolah, alamat })
+    });
+    const data = await res.json();
+    if (data && !data.error) {
+      set((state) => ({ settings: { ...state.settings, namaSekolah: data.namaSekolah, alamat: data.alamat } }));
+    }
+    return data;
+  },
+
+  saveSettingsLogo: async (logoDataUrl) => {
+    const res = await fetch(`${API_BASE}/admin/settings/logo`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ logoDataUrl })
+    });
+    const data = await res.json();
+    if (data && !data.error) {
+      set((state) => ({ settings: { ...state.settings, logoPath: data.logoPath } }));
+    }
+    return data;
+  },
+
+  deleteSettingsLogo: async () => {
+    const res = await fetch(`${API_BASE}/admin/settings/logo`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data && !data.error) {
+      set((state) => ({ settings: { ...state.settings, logoPath: null } }));
+    }
+    return data;
   },
 
   // --- TAHUN PELAJARAN ---

@@ -1,6 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../db');
+const fs = require('fs').promises;
+const fsSync = require('fs');
+const path = require('path');
+const { exec } = require('child_process');
+const { promisify } = require('util');
+const execAsync = promisify(exec);
 
 // --- TAHUN PELAJARAN ---
 router.get('/tahun-pelajaran', async (req, res) => {
@@ -424,6 +430,155 @@ router.put('/jam-pelajaran/:id', async (req, res) => {
 router.delete('/jam-pelajaran/:id', async (req, res) => {
   await prisma.jamPelajaran.delete({ where: { id: parseInt(req.params.id) } });
   res.json({ success: true });
+});
+
+// --- PENGATURAN SEKOLAH ---
+const UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads');
+
+router.get('/settings', async (req, res) => {
+  try {
+    let settings = await prisma.schoolSettings.findFirst();
+    if (!settings) {
+      settings = await prisma.schoolSettings.create({
+        data: {
+          namaSekolah: 'SMK NEGERI 1 ARAHAN',
+          alamat: 'Jl. Raya Arahan, Kabupaten Indramayu, Jawa Barat'
+        }
+      });
+    }
+    res.json(settings);
+  } catch (err) {
+    res.status(500).json({ error: 'Gagal memuat pengaturan sekolah.' });
+  }
+});
+
+router.put('/settings', async (req, res) => {
+  try {
+    const { namaSekolah, alamat } = req.body;
+    let settings = await prisma.schoolSettings.findFirst();
+    if (!settings) {
+      settings = await prisma.schoolSettings.create({ data: { namaSekolah, alamat } });
+    } else {
+      settings = await prisma.schoolSettings.update({
+        where: { id: settings.id },
+        data: { namaSekolah, alamat }
+      });
+    }
+    res.json(settings);
+  } catch (err) {
+    res.status(400).json({ error: 'Gagal menyimpan pengaturan sekolah.' });
+  }
+});
+
+router.post('/settings/logo', async (req, res) => {
+  try {
+    const { logoDataUrl } = req.body; // format: data:image/png;base64,....
+    if (!logoDataUrl || !logoDataUrl.startsWith('data:image')) {
+      return res.status(400).json({ error: 'Data logo tidak valid.' });
+    }
+    const match = logoDataUrl.match(/^data:image\/(png|jpeg|jpg|webp|svg\+xml);base64,(.+)$/);
+    if (!match) {
+      return res.status(400).json({ error: 'Format gambar tidak didukung. Gunakan PNG/JPEG/WebP/SVG.' });
+    }
+    const ext = match[1] === 'svg+xml' ? 'svg' : (match[1] === 'jpeg' ? 'jpg' : match[1]);
+    const base64 = match[2];
+    const buffer = Buffer.from(base64, 'base64');
+    const filename = `logo-${Date.now()}.${ext}`;
+    if (!fsSync.existsSync(UPLOAD_DIR)) fsSync.mkdirSync(UPLOAD_DIR, { recursive: true });
+
+    // Hapus logo lama jika ada
+    let settings = await prisma.schoolSettings.findFirst();
+    if (settings?.logoPath) {
+      const oldFile = path.join(UPLOAD_DIR, path.basename(settings.logoPath));
+      try { await fs.unlink(oldFile); } catch (e) {}
+    }
+
+    await fs.writeFile(path.join(UPLOAD_DIR, filename), buffer);
+    if (!settings) {
+      settings = await prisma.schoolSettings.create({ data: { logoPath: `/uploads/${filename}` } });
+    } else {
+      settings = await prisma.schoolSettings.update({
+        where: { id: settings.id },
+        data: { logoPath: `/uploads/${filename}` }
+      });
+    }
+    res.json(settings);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal mengupload logo.' });
+  }
+});
+
+router.delete('/settings/logo', async (req, res) => {
+  try {
+    let settings = await prisma.schoolSettings.findFirst();
+    if (settings?.logoPath) {
+      const oldFile = path.join(UPLOAD_DIR, path.basename(settings.logoPath));
+      try { await fs.unlink(oldFile); } catch (e) {}
+      settings = await prisma.schoolSettings.update({
+        where: { id: settings.id },
+        data: { logoPath: null }
+      });
+    }
+    res.json(settings || { success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Gagal menghapus logo.' });
+  }
+});
+
+// --- BACKUP & RESTORE DATABASE ---
+const dbUrl = process.env.DATABASE_URL;
+
+function parseDbUrl(url) {
+  // postgresql://user:pass@host:port/db?schema=public
+  const m = url.match(/postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/([^?]+)/);
+  if (!m) return null;
+  return { user: m[1], pass: m[2], host: m[3], port: m[4], db: m[5] };
+}
+
+router.get('/backup-database', async (req, res) => {
+  let tmpFile = null;
+  try {
+    const cfg = parseDbUrl(dbUrl);
+    if (!cfg) return res.status(500).json({ error: 'Konfigurasi database tidak valid.' });
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    tmpFile = path.join(require('os').tmpdir(), `agenda-guru-backup-${stamp}.sql`);
+    const cmd = `PGPASSWORD='${cfg.pass}' pg_dump -h ${cfg.host} -p ${cfg.port} -U ${cfg.user} ${cfg.db} > "${tmpFile}"`;
+    await execAsync(cmd, { shell: '/bin/bash' });
+    const stat = await fs.stat(tmpFile);
+    res.setHeader('Content-Type', 'application/sql');
+    res.setHeader('Content-Disposition', `attachment; filename="backup-${stamp}.sql"`);
+    const data = await fs.readFile(tmpFile);
+    res.send(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal membuat backup database.' });
+  } finally {
+    if (tmpFile) { try { await fs.unlink(tmpFile); } catch (e) {} }
+  }
+});
+
+router.post('/restore-database', async (req, res) => {
+  let tmpFile = null;
+  try {
+    const { sql } = req.body;
+    if (!sql || !sql.trim()) return res.status(400).json({ error: 'Tidak ada data untuk dipulihkan.' });
+    const cfg = parseDbUrl(dbUrl);
+    if (!cfg) return res.status(500).json({ error: 'Konfigurasi database tidak valid.' });
+    tmpFile = path.join(require('os').tmpdir(), `agenda-guru-restore-${Date.now()}.sql`);
+    await fs.writeFile(tmpFile, sql);
+    // Bersihkan schema dulu supaya restore benar-benar menggantikan data lama
+    const dropCmd = `PGPASSWORD='${cfg.pass}' psql -h ${cfg.host} -p ${cfg.port} -U ${cfg.user} -d ${cfg.db} -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"`;
+    await execAsync(dropCmd, { shell: '/bin/bash' });
+    const cmd = `PGPASSWORD='${cfg.pass}' psql -h ${cfg.host} -p ${cfg.port} -U ${cfg.user} -d ${cfg.db} -f "${tmpFile}"`;
+    const { stderr } = await execAsync(cmd, { shell: '/bin/bash' });
+    res.json({ success: true, message: 'Database berhasil dipulihkan.', log: stderr });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal memulihkan database. Pastikan file backup valid.' });
+  } finally {
+    if (tmpFile) { try { await fs.unlink(tmpFile); } catch (e) {} }
+  }
 });
 
 module.exports = router;

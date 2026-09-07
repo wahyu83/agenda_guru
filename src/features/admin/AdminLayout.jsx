@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Calendar, Users, BookOpen, GraduationCap, FileText, LogOut, Clock } from 'lucide-react';
+import { LayoutDashboard, Calendar, Users, BookOpen, GraduationCap, FileText, LogOut, Clock, Settings, DatabaseBackup } from 'lucide-react';
 import { useAppStore } from '../../lib/store';
 import ProfileModal from '../../components/ProfileModal';
 
 const AdminLayout = () => {
   const navigate = useNavigate();
-  const { user, setUser, fetchMasterData } = useAppStore();
+  const { user, settings, setUser, fetchMasterData, fetchSettings } = useAppStore();
   const [showProfile, setShowProfile] = useState(false);
 
   useEffect(() => {
@@ -18,8 +18,9 @@ const AdminLayout = () => {
   useEffect(() => {
     if (user && user.role === 'admin') {
       fetchMasterData();
+      fetchSettings();
     }
-  }, [user, fetchMasterData]);
+  }, [user, fetchMasterData, fetchSettings]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -37,6 +38,8 @@ const AdminLayout = () => {
     { name: 'Data Siswa', path: '/admin/siswa', icon: <GraduationCap size={20} /> },
     { name: 'Laporan', path: '/admin/laporan', icon: <FileText size={20} /> },
     { name: 'Jam Pelajaran', path: '/admin/jam-pelajaran', icon: <Clock size={20} /> },
+    { name: 'Pengaturan Sekolah', path: '/admin/settings', icon: <Settings size={20} /> },
+    { name: 'Backup Database', path: '/admin/backup', icon: <DatabaseBackup size={20} /> },
   ];
 
   return (
@@ -44,10 +47,14 @@ const AdminLayout = () => {
       {/* Sidebar */}
       <div className="admin-sidebar shadow-md">
         <div style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
-          <div style={{ padding: '0.5rem', backgroundColor: 'var(--primary)', borderRadius: 'var(--radius-md)', color: 'white' }}>
-            <BookOpen size={24} />
-          </div>
-          <span style={{ fontWeight: 'bold', fontSize: '1.125rem' }}>Admin Panel</span>
+          {settings.logoPath ? (
+            <img src={settings.logoPath} alt={settings.namaSekolah} style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: 'var(--radius-md)', backgroundColor: 'white', padding: '0.25rem' }} />
+          ) : (
+            <div style={{ padding: '0.5rem', backgroundColor: 'var(--primary)', borderRadius: 'var(--radius-md)', color: 'white' }}>
+              <BookOpen size={24} />
+            </div>
+          )}
+          <span style={{ fontWeight: 'bold', fontSize: '1.125rem' }}>{settings.namaSekolah}</span>
         </div>
         
         <nav style={{ padding: '1rem 0', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>

@@ -90,7 +90,7 @@ const downloadReceiptImage = (group, user, onSuccess, onError) => {
   c.fillText('SURAT IZIN SISWA', W / 2, y);
   y += 36;
   c.font = 'bold 20px monospace';
-  c.fillText('SMKN 1 ARAHAN', W / 2, y);
+  c.fillText(settings.namaSekolah, W / 2, y);
   y += 24;
   c.font = '16px monospace';
   const dateStr = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -201,7 +201,7 @@ const downloadReceiptImage = (group, user, onSuccess, onError) => {
 };
 
 const IzinSiswaScreen = () => {
-  const { user, kelas, siswaKelasAktif, permohonanIzin, fetchSiswaKelas, fetchPermohonanIzin, createPermohonanIzinBatch, deletePermohonanIzin } = useAppStore();
+  const { user, settings, kelas, siswaKelasAktif, permohonanIzin, fetchSiswaKelas, fetchPermohonanIzin, createPermohonanIzinBatch, deletePermohonanIzin } = useAppStore();
 
   const [showForm, setShowForm] = useState(false);
   const [viewKelasId, setViewKelasId] = useState('');
@@ -342,7 +342,7 @@ const IzinSiswaScreen = () => {
         <div ref={receiptRef} className="print-only-receipt" style={{ position: 'fixed', top: '-9999px', left: '-9999px', width: '320px', padding: '12px', backgroundColor: '#fff', fontFamily: "'Courier New', 'Consolas', monospace", fontSize: '13px', lineHeight: 1.5, color: '#000', boxSizing: 'border-box' }}>
           <div style={{ textAlign: 'center', marginBottom: '8px' }}>
             <div style={{ fontSize: '15px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', color: '#000' }}>SURAT IZIN SISWA</div>
-            <div style={{ fontSize: '12px', fontWeight: 'bold', marginTop: '2px', color: '#000' }}>SMKN 1 ARAHAN</div>
+            <div style={{ fontSize: '12px', fontWeight: 'bold', marginTop: '2px', color: '#000', textTransform: 'uppercase' }}>{settings.namaSekolah}</div>
             <div style={{ fontSize: '10px', marginTop: '2px', color: '#000' }}>
               {new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             </div>

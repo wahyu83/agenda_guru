@@ -15,7 +15,7 @@ const StatCard = ({ title, value, icon, color }) => (
 );
 
 const AdminDashboard = () => {
-  const { guru, siswa, mapel, laporanAgenda, fetchMasterData, fetchLaporanAgenda } = useAppStore();
+  const { guru, siswa, mapel, laporanAgenda, settings, fetchMasterData, fetchLaporanAgenda } = useAppStore();
 
   useEffect(() => {
     fetchMasterData();
@@ -49,7 +49,7 @@ const AdminDashboard = () => {
     <div className="flex flex-col gap-4">
       <div>
         <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Dashboard</h1>
-        <p style={{ color: 'var(--text-muted)' }}>Ringkasan sistem Agenda guru SMKN 1 Arahan.</p>
+        <p style={{ color: 'var(--text-muted)' }}>Ringkasan sistem Agenda guru {settings.namaSekolah}.</p>
 
       </div>
 
