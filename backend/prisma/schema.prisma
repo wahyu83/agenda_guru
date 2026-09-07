@@ -20,6 +20,9 @@ model User {
   kelasWali Kelas[]            @relation("WaliKelas")
   piket     Piket[]
   izin      PermohonanIzin[]
+  bkKasus   BkKasus[]          @relation("BkKonselor")
+  bkKonseling BkKonseling[]    @relation("BkKonselingKonselor")
+  bkBimbingan BkBimbingan[]    @relation("BkBimbinganKonselor")
 }
 
 model TahunPelajaran {
@@ -46,6 +49,7 @@ model Kelas {
   pengampu         Pengampu[]
   waliKelas        User?              @relation("WaliKelas", fields: [waliKelasId], references: [id])
   izin             PermohonanIzin[]
+  bkBimbingan      BkBimbingan[]
 }
 
 model Siswa {
@@ -56,6 +60,9 @@ model Siswa {
   enrollment Enrollment[]
   nilai      Nilai[]
   izin       PermohonanIzin[]
+  bkKasus    BkKasus[]
+  bkKonseling BkKonseling[]
+  bkBimbinganPeserta BkBimbinganPeserta[]
 }
 
 model Enrollment {
@@ -189,4 +196,59 @@ model SchoolSettings {
   alamat      String  @default("Jl. Raya Arahan, Kabupaten Indramayu, Jawa Barat")
   logoPath    String?
   updatedAt   DateTime @updatedAt
+}
+
+model BkKasus {
+  id          Int       @id @default(autoincrement())
+  siswaId     Int
+  konselorId  Int
+  jenisKasus  String
+  kronologi   String    @db.Text
+  tindakan    String?
+  status      String    @default("diproses") // "diproses" | "dilanjutkan" | "selesai"
+  tanggal     DateTime  @db.Date
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  siswa       Siswa     @relation(fields: [siswaId], references: [id], onDelete: Cascade)
+  konselor    User      @relation("BkKonselor", fields: [konselorId], references: [id], onDelete: Cascade)
+}
+
+model BkKonseling {
+  id          Int       @id @default(autoincrement())
+  siswaId     Int
+  konselorId  Int
+  topik       String
+  catatan     String    @db.Text
+  tindakLanjut String?
+  tanggal     DateTime  @db.Date
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  siswa       Siswa     @relation(fields: [siswaId], references: [id], onDelete: Cascade)
+  konselor    User      @relation("BkKonselingKonselor", fields: [konselorId], references: [id], onDelete: Cascade)
+}
+
+model BkBimbingan {
+  id          Int       @id @default(autoincrement())
+  konselorId  Int
+  judul       String
+  topik       String
+  materi      String?   @db.Text
+  tanggal     DateTime  @db.Date
+  kelasId     Int?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  konselor    User      @relation("BkBimbinganKonselor", fields: [konselorId], references: [id], onDelete: Cascade)
+  kelas       Kelas?    @relation(fields: [kelasId], references: [id], onDelete: SetNull)
+  peserta     BkBimbinganPeserta[]
+}
+
+model BkBimbinganPeserta {
+  id           Int         @id @default(autoincrement())
+  bimbinganId  Int
+  siswaId      Int
+  hadir        Boolean     @default(true)
+  bimbingan    BkBimbingan @relation(fields: [bimbinganId], references: [id], onDelete: Cascade)
+  siswa        Siswa       @relation(fields: [siswaId], references: [id], onDelete: Cascade)
+
+  @@unique([bimbinganId, siswaId])
 }

@@ -21,6 +21,10 @@ export const useAppStore = create((set, get) => ({
   nilaiKelas: { nilai: [], pengampu: [] },
   jamPelajaran: [],
   settings: { namaSekolah: 'SMK NEGERI 1 ARAHAN', alamat: 'Jl. Raya Arahan, Kabupaten Indramayu, Jawa Barat', logoPath: null },
+  bkKasus: [],
+  bkKonseling: [],
+  bkBimbingan: [],
+  bkRekap: null,
   user: JSON.parse(localStorage.getItem('user')) || null,
 
   setUser: (userData) => set({ user: userData }),
@@ -757,5 +761,137 @@ export const useAppStore = create((set, get) => ({
     set((state) => ({
       permohonanIzin: state.permohonanIzin.filter((item) => item.id !== id)
     }));
+  },
+
+  // --- MODUL GURU BK ---
+  fetchBkKasus: async (params = {}) => {
+    let url = `${API_BASE}/bk/kasus`;
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v) qs.append(k, v); });
+    if (qs.toString()) url += `?${qs.toString()}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal memuat kasus');
+    set({ bkKasus: data });
+  },
+
+  createBkKasus: async (payload) => {
+    const res = await fetch(`${API_BASE}/bk/kasus`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal menambah kasus');
+    set((state) => ({ bkKasus: [data, ...state.bkKasus] }));
+    return data;
+  },
+
+  updateBkKasus: async (id, payload) => {
+    const res = await fetch(`${API_BASE}/bk/kasus/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal mengupdate kasus');
+    set((state) => ({ bkKasus: state.bkKasus.map((k) => k.id === id ? { ...k, ...data } : k) }));
+    return data;
+  },
+
+  deleteBkKasus: async (id) => {
+    const res = await fetch(`${API_BASE}/bk/kasus/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Gagal menghapus kasus');
+    set((state) => ({ bkKasus: state.bkKasus.filter((k) => k.id !== id) }));
+  },
+
+  fetchBkKonseling: async (params = {}) => {
+    let url = `${API_BASE}/bk/konseling`;
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v) qs.append(k, v); });
+    if (qs.toString()) url += `?${qs.toString()}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal memuat konseling');
+    set({ bkKonseling: data });
+  },
+
+  createBkKonseling: async (payload) => {
+    const res = await fetch(`${API_BASE}/bk/konseling`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal menambah konseling');
+    set((state) => ({ bkKonseling: [data, ...state.bkKonseling] }));
+    return data;
+  },
+
+  updateBkKonseling: async (id, payload) => {
+    const res = await fetch(`${API_BASE}/bk/konseling/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal mengupdate konseling');
+    set((state) => ({ bkKonseling: state.bkKonseling.map((c) => c.id === id ? { ...c, ...data } : c) }));
+    return data;
+  },
+
+  deleteBkKonseling: async (id) => {
+    const res = await fetch(`${API_BASE}/bk/konseling/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Gagal menghapus konseling');
+    set((state) => ({ bkKonseling: state.bkKonseling.filter((c) => c.id !== id) }));
+  },
+
+  fetchBkBimbingan: async (params = {}) => {
+    let url = `${API_BASE}/bk/bimbingan`;
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v) qs.append(k, v); });
+    if (qs.toString()) url += `?${qs.toString()}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal memuat bimbingan');
+    set({ bkBimbingan: data });
+  },
+
+  createBkBimbingan: async (payload) => {
+    const res = await fetch(`${API_BASE}/bk/bimbingan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal menambah bimbingan');
+    set((state) => ({ bkBimbingan: [data, ...state.bkBimbingan] }));
+    return data;
+  },
+
+  updateBkBimbingan: async (id, payload) => {
+    const res = await fetch(`${API_BASE}/bk/bimbingan/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal mengupdate bimbingan');
+    set((state) => ({ bkBimbingan: state.bkBimbingan.map((b) => b.id === id ? { ...b, ...data } : b) }));
+    return data;
+  },
+
+  deleteBkBimbingan: async (id) => {
+    const res = await fetch(`${API_BASE}/bk/bimbingan/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Gagal menghapus bimbingan');
+    set((state) => ({ bkBimbingan: state.bkBimbingan.filter((b) => b.id !== id) }));
+  },
+
+  fetchBkRekap: async (bulan = '') => {
+    const url = bulan ? `${API_BASE}/bk/rekap?bulan=${bulan}` : `${API_BASE}/bk/rekap`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal memuat rekap BK');
+    set({ bkRekap: data });
   }
 }));

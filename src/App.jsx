@@ -38,6 +38,13 @@ import PiketLayout from './features/piket/PiketLayout';
 import PiketScreen from './features/piket/PiketScreen';
 import IzinSiswaScreen from './features/piket/IzinSiswaScreen';
 
+// Guru BK
+import BkLayout from './features/bk/BkLayout';
+import BkDashboard from './features/bk/pages/BkDashboard';
+import KasusScreen from './features/bk/pages/KasusScreen';
+import KonselingScreen from './features/bk/pages/KonselingScreen';
+import BimbinganScreen from './features/bk/pages/BimbinganScreen';
+
 function App() {
   const fetchMasterData = useAppStore((state) => state.fetchMasterData);
   const fetchSettings = useAppStore((state) => state.fetchSettings);
@@ -93,6 +100,14 @@ function App() {
         <Route path="/piket" element={<PiketLayout />}>
           <Route index element={<PiketScreen />} />
           <Route path="izin-siswa" element={<IzinSiswaScreen />} />
+        </Route>
+
+        {/* Guru BK Routes */}
+        <Route path="/bk" element={<BkLayout />}>
+          <Route index element={<BkDashboard />} />
+          <Route path="kasus" element={<KasusScreen />} />
+          <Route path="konseling" element={<KonselingScreen />} />
+          <Route path="bimbingan" element={<BimbinganScreen />} />
         </Route>
 
         {/* Catch all */}

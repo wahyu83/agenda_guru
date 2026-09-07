@@ -22,6 +22,8 @@ const LoginScreen = () => {
         navigate('/admin', { replace: true });
       } else if (user.role === 'guru_piket') {
         navigate('/piket', { replace: true });
+      } else if (user.role === 'guru_bk') {
+        navigate('/bk', { replace: true });
       } else {
         navigate('/guru', { replace: true });
       }
@@ -57,6 +59,8 @@ const LoginScreen = () => {
         navigate('/admin');
       } else if (data.role === 'guru_piket') {
         navigate('/piket');
+      } else if (data.role === 'guru_bk') {
+        navigate('/bk');
       } else {
         navigate('/guru');
       }
