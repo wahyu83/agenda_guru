@@ -145,9 +145,14 @@ export const useAppStore = create((set, get) => ({
       body: JSON.stringify(data) // { nama, nip, username }
     });
     const newData = await res.json();
-    set((state) => ({ guru: [...state.guru, newData] }));
+    set((state) => {
+      const guruSorted = [...state.guru, newData].sort((a, b) =>
+        String(a.nama || '').localeCompare(String(b.nama || ''), 'id', { sensitivity: 'base' })
+      );
+      return { guru: guruSorted };
+    });
   },
-  
+
   deleteGuru: async (id) => {
     await fetch(`${API_BASE}/admin/guru/${id}`, { method: 'DELETE' });
     set((state) => ({ guru: state.guru.filter((item) => item.id !== id) }));
