@@ -291,85 +291,58 @@ const LaporanBk = () => {
         {bkLaporan.kasus.length === 0 && bkLaporan.konseling.length === 0 && bkLaporan.bimbingan.length === 0 ? (
           <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Belum ada data untuk filter yang dipilih.</p>
         ) : (
-          <div style={{ padding: '1rem' }}>
+          <div className="flex flex-col gap-3" style={{ padding: '1rem' }}>
             {bkLaporan.kasus.length > 0 && (
-              <div style={{ marginBottom: '1.5rem' }}>
+              <div>
                 <h4 style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>Kasus Siswa ({bkLaporan.kasus.length})</h4>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--surface-hover)' }}>
-                        {['No','Tanggal','Nama','NIS','Kelas','Jenis Kasus','Kronologi','Status'].map(h => <th key={h} style={{ padding: '0.5rem', fontWeight: '600', textAlign: 'left' }}>{h}</th>)}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {bkLaporan.kasus.map((k, i) => (
-                        <tr key={i} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                          <td style={{ padding: '0.5rem' }}>{i + 1}</td>
-                          <td style={{ padding: '0.5rem' }}>{formatDate(k.tanggal)}</td>
-                          <td style={{ padding: '0.5rem', fontWeight: '500' }}>{k.nama}</td>
-                          <td style={{ padding: '0.5rem' }}>{k.nis}</td>
-                          <td style={{ padding: '0.5rem' }}>{k.kelas}</td>
-                          <td style={{ padding: '0.5rem' }}>{k.jenisKasus}</td>
-                          <td style={{ padding: '0.5rem' }}>{k.kronologi}</td>
-                          <td style={{ padding: '0.5rem' }}>{statusLabels[k.status] || k.status}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="flex flex-col gap-2">
+                  {bkLaporan.kasus.map((k, i) => (
+                    <div key={i} style={{ padding: '0.75rem', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+                      <div className="flex justify-between items-center flex-wrap gap-1">
+                        <span style={{ fontWeight: '600', fontSize: '0.875rem' }}>{i + 1}. {k.nama}</span>
+                        <span style={{ fontSize: '0.75rem', padding: '0.1rem 0.5rem', borderRadius: 'var(--radius-full)', backgroundColor: 'var(--danger)15', color: 'var(--danger)', fontWeight: '600' }}>
+                          {statusLabels[k.status] || k.status}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                        {formatDate(k.tanggal)} · {k.jenisKasus} · {k.kelas}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
             {bkLaporan.konseling.length > 0 && (
-              <div style={{ marginBottom: '1.5rem' }}>
+              <div>
                 <h4 style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>Konseling ({bkLaporan.konseling.length})</h4>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--surface-hover)' }}>
-                        {['No','Tanggal','Nama','NIS','Kelas','Topik','Catatan'].map(h => <th key={h} style={{ padding: '0.5rem', fontWeight: '600', textAlign: 'left' }}>{h}</th>)}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {bkLaporan.konseling.map((c, i) => (
-                        <tr key={i} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                          <td style={{ padding: '0.5rem' }}>{i + 1}</td>
-                          <td style={{ padding: '0.5rem' }}>{formatDate(c.tanggal)}</td>
-                          <td style={{ padding: '0.5rem', fontWeight: '500' }}>{c.nama}</td>
-                          <td style={{ padding: '0.5rem' }}>{c.nis}</td>
-                          <td style={{ padding: '0.5rem' }}>{c.kelas}</td>
-                          <td style={{ padding: '0.5rem' }}>{c.topik}</td>
-                          <td style={{ padding: '0.5rem' }}>{c.catatan}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="flex flex-col gap-2">
+                  {bkLaporan.konseling.map((c, i) => (
+                    <div key={i} style={{ padding: '0.75rem', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+                      <div className="flex justify-between items-center flex-wrap gap-1">
+                        <span style={{ fontWeight: '600', fontSize: '0.875rem' }}>{i + 1}. {c.nama}</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{formatDate(c.tanggal)}</span>
+                      </div>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>{c.topik} · {c.kelas}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
             {bkLaporan.bimbingan.length > 0 && (
               <div>
                 <h4 style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>Bimbingan Kelompok ({bkLaporan.bimbingan.length})</h4>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--surface-hover)' }}>
-                        {['No','Tanggal','Judul','Topik','Kelas','Jumlah Peserta'].map(h => <th key={h} style={{ padding: '0.5rem', fontWeight: '600', textAlign: 'left' }}>{h}</th>)}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {bkLaporan.bimbingan.map((b, i) => (
-                        <tr key={i} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                          <td style={{ padding: '0.5rem' }}>{i + 1}</td>
-                          <td style={{ padding: '0.5rem' }}>{formatDate(b.tanggal)}</td>
-                          <td style={{ padding: '0.5rem', fontWeight: '500' }}>{b.judul}</td>
-                          <td style={{ padding: '0.5rem' }}>{b.topik}</td>
-                          <td style={{ padding: '0.5rem' }}>{b.kelas}</td>
-                          <td style={{ padding: '0.5rem' }}>{b.peserta}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="flex flex-col gap-2">
+                  {bkLaporan.bimbingan.map((b, i) => (
+                    <div key={i} style={{ padding: '0.75rem', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+                      <div className="flex justify-between items-center flex-wrap gap-1">
+                        <span style={{ fontWeight: '600', fontSize: '0.875rem' }}>{i + 1}. {b.judul}</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{b.peserta != null ? b.peserta : 0} peserta</span>
+                      </div>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                        {formatDate(b.tanggal)} · {b.topik} · {b.kelas}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
