@@ -138,18 +138,18 @@ const LaporanBk = () => {
     const filename = `Laporan_BK_${kind.charAt(0).toUpperCase() + kind.slice(1)}${selectedMonth ? '_' + selectedMonth : ''}`;
     try {
       const logoDataUrl = await loadLogoDataUrl();
-      const doc = new jsPDF();
+      const doc = new jsPDF('landscape');
       const hasLogo = !!(settings.logoPath && logoDataUrl);
-      const textX = hasLogo ? 34 : 105;
+      const textX = hasLogo ? 34 : 148; // center landscape
       const align = hasLogo ? 'left' : 'center';
       if (hasLogo) {
-        try { doc.addImage(logoDataUrl, 'PNG', 14, 10, 16, 16); } catch (e) {}
+        try { doc.addImage(logoDataUrl, 'PNG', 14, 8, 16, 16); } catch (e) {}
       }
       doc.setFontSize(16);
       doc.text(settings.namaSekolah, textX, 15, { align });
       doc.setFontSize(10);
       doc.text(settings.alamat, textX, 22, { align });
-      doc.line(14, 25, 196, 25);
+      doc.line(14, 25, 283, 25); // garis penuh (A4 landscape 297mm)
       doc.setFontSize(14);
       doc.text(title + monthLabel + kelasLabel, 14, 35);
       doc.setFontSize(9);
