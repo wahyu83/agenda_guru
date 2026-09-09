@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation, NavLink } from 'react-router-dom';
-import { UserCog, LayoutDashboard, FileWarning, MessagesSquare, Users, BarChart3 } from 'lucide-react';
+import { UserCog, LayoutDashboard, FileWarning, MessagesSquare, Users, FileText } from 'lucide-react';
 import { useAppStore } from '../../lib/store';
 import ProfileModal from '../../components/ProfileModal';
 
@@ -23,6 +23,7 @@ const BkLayout = () => {
     { path: '/bk/kasus', label: 'Kasus', icon: <FileWarning size={20} /> },
     { path: '/bk/konseling', label: 'Konseling', icon: <MessagesSquare size={20} /> },
     { path: '/bk/bimbingan', label: 'Bimbingan', icon: <Users size={20} /> },
+    { path: '/bk/laporan', label: 'Laporan', icon: <FileText size={20} /> },
   ];
 
   return (

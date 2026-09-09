@@ -25,6 +25,7 @@ export const useAppStore = create((set, get) => ({
   bkKonseling: [],
   bkBimbingan: [],
   bkRekap: null,
+  bkLaporan: { kasus: [], konseling: [], bimbingan: [] },
   user: JSON.parse(localStorage.getItem('user')) || null,
 
   setUser: (userData) => set({ user: userData }),
@@ -893,5 +894,18 @@ export const useAppStore = create((set, get) => ({
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Gagal memuat rekap BK');
     set({ bkRekap: data });
+  },
+
+  // --- LAPORAN BK ---
+  bkLaporan: { kasus: [], konseling: [], bimbingan: [] },
+  fetchBkLaporan: async (params = {}) => {
+    let url = `${API_BASE}/bk/laporan`;
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v) qs.append(k, v); });
+    if (qs.toString()) url += `?${qs.toString()}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal memuat laporan BK');
+    set({ bkLaporan: data });
   }
 }));

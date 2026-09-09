@@ -307,4 +307,65 @@ router.get('/rekap', async (req, res) => {
   }
 });
 
+// --- LAPORAN / EXPORT BK ---
+router.get('/laporan', async (req, res) => {
+  try {
+    const { bulan, kelasId } = req.query;
+    const startBulan = bulan ? new Date(`${bulan}-01T00:00:00.000Z`) : null;
+    const nextBulan = startBulan ? new Date(startBulan.getFullYear(), startBulan.getMonth() + 1, 1) : null;
+
+    const kasusWhere = {
+      ...(startBulan ? { tanggal: { gte: startBulan, lt: nextBulan } } : {}),
+      ...(kelasId ? { siswa: { enrollment: { some: { kelasId: parseInt(kelasId) } } } } : {})
+    };
+    const konselingWhere = {
+      ...(startBulan ? { tanggal: { gte: startBulan, lt: nextBulan } } : {}),
+      ...(kelasId ? { siswa: { enrollment: { some: { kelasId: parseInt(kelasId) } } } } : {})
+    };
+    const bimbinganWhere = {
+      ...(startBulan ? { tanggal: { gte: startBulan, lt: nextBulan } } : {}),
+      ...(kelasId ? { kelasId: parseInt(kelasId) } : {})
+    };
+
+    const [kasus, konseling, bimbingan] = await Promise.all([
+      prisma.bkKasus.findMany({
+        where: kasusWhere,
+        include: { siswa: { include: { enrollment: { include: { kelas: true } } } }, konselor: { select: { nama: true, nip: true } } },
+        orderBy: { tanggal: 'desc' }
+      }),
+      prisma.bkKonseling.findMany({
+        where: konselingWhere,
+        include: { siswa: { include: { enrollment: { include: { kelas: true } } } }, konselor: { select: { nama: true, nip: true } } },
+        orderBy: { tanggal: 'desc' }
+      }),
+      prisma.bkBimbingan.findMany({
+        where: bimbinganWhere,
+        include: { konselor: { select: { nama: true, nip: true } }, kelas: { select: { nama: true } }, peserta: { include: { siswa: true } } },
+        orderBy: { tanggal: 'desc' }
+      })
+    ]);
+
+    const fmtKasus = kasus.map(k => ({
+      no: null, tanggal: k.tanggal, nama: k.siswa?.nama, nis: k.siswa?.nis,
+      kelas: k.siswa?.enrollment?.[0]?.kelas?.nama || '-', jenisKasus: k.jenisKasus,
+      kronologi: k.kronologi, tindakan: k.tindakan || '-', status: k.status,
+      konselor: k.konselor?.nama || '-'
+    }));
+    const fmtKonseling = konseling.map(c => ({
+      no: null, tanggal: c.tanggal, nama: c.siswa?.nama, nis: c.siswa?.nis,
+      kelas: c.siswa?.enrollment?.[0]?.kelas?.nama || '-', topik: c.topik,
+      catatan: c.catatan, tindakLanjut: c.tindakLanjut || '-', konselor: c.konselor?.nama || '-'
+    }));
+    const fmtBimbingan = bimbingan.map(b => ({
+      no: null, tanggal: b.tanggal, judul: b.judul, topik: b.topik, materi: b.materi || '-',
+      kelas: b.kelas?.nama || 'Umum', peserta: (b.peserta || []).length, konselor: b.konselor?.nama || '-'
+    }));
+
+    res.json({ kasus: fmtKasus, konseling: fmtKonseling, bimbingan: fmtBimbingan });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal memuat laporan BK.' });
+  }
+});
+
 module.exports = router;

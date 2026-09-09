@@ -44,6 +44,7 @@ import BkDashboard from './features/bk/pages/BkDashboard';
 import KasusScreen from './features/bk/pages/KasusScreen';
 import KonselingScreen from './features/bk/pages/KonselingScreen';
 import BimbinganScreen from './features/bk/pages/BimbinganScreen';
+import LaporanBk from './features/bk/pages/LaporanBk';
 
 function App() {
   const fetchMasterData = useAppStore((state) => state.fetchMasterData);
@@ -108,6 +109,7 @@ function App() {
           <Route path="kasus" element={<KasusScreen />} />
           <Route path="konseling" element={<KonselingScreen />} />
           <Route path="bimbingan" element={<BimbinganScreen />} />
+          <Route path="laporan" element={<LaporanBk />} />
         </Route>
 
         {/* Catch all */}
