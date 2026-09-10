@@ -26,6 +26,8 @@ export const useAppStore = create((set, get) => ({
   bkBimbingan: [],
   bkRekap: null,
   bkLaporan: { kasus: [], konseling: [], bimbingan: [] },
+  laporanPiketList: [],
+  laporanIzinList: [],
   user: JSON.parse(localStorage.getItem('user')) || null,
 
   setUser: (userData) => set({ user: userData }),
@@ -901,16 +903,27 @@ export const useAppStore = create((set, get) => ({
     set({ bkRekap: data });
   },
 
-  // --- LAPORAN BK ---
-  bkLaporan: { kasus: [], konseling: [], bimbingan: [] },
-  fetchBkLaporan: async (params = {}) => {
-    let url = `${API_BASE}/bk/laporan`;
+  // --- LAPORAN PIKET ---
+  fetchLaporanPiketList: async (params = {}) => {
+    let url = `${API_BASE}/piket/laporan`;
     const qs = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => { if (v) qs.append(k, v); });
     if (qs.toString()) url += `?${qs.toString()}`;
     const res = await fetch(url);
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Gagal memuat laporan BK');
-    set({ bkLaporan: data });
+    if (!res.ok) throw new Error(data.error || 'Gagal memuat laporan piket');
+    set({ laporanPiketList: data });
+  },
+
+  // --- LAPORAN IZIN SISWA ---
+  fetchLaporanIzinList: async (params = {}) => {
+    let url = `${API_BASE}/izin/laporan`;
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v) qs.append(k, v); });
+    if (qs.toString()) url += `?${qs.toString()}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal memuat laporan izin');
+    set({ laporanIzinList: data });
   }
 }));

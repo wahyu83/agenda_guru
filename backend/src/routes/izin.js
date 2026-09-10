@@ -189,4 +189,49 @@ router.get('/group/:batchId', async (req, res) => {
   }
 });
 
+// GET laporan izin siswa (rekap permohonan izin) berdasarkan rentang tanggal
+router.get('/laporan', async (req, res) => {
+  try {
+    const { tanggalDari, tanggalSampai, kelasId } = req.query;
+    const from = toUTCDate(tanggalDari || '1970-01-01');
+    const to = toUTCDate(tanggalSampai || todayLocalStr());
+    const toEnd = new Date(to.getTime() + 24 * 60 * 60 * 1000);
+
+    const where = {
+      tanggal: { gte: from, lt: toEnd },
+      ...(kelasId ? { kelasId: parseInt(kelasId) } : {})
+    };
+
+    const data = await prisma.permohonanIzin.findMany({
+      where,
+      include: {
+        siswa: true,
+        kelas: true,
+        guruPiket: { select: { id: true, nama: true } }
+      },
+      orderBy: [{ tanggal: 'desc' }, { createdAt: 'desc' }]
+    });
+
+    const jenisMap = { masuk: 'Izin Masuk', keluar: 'Izin Keluar' };
+    const statusMap = { diajukan: 'Diajukan', disetujui: 'Disetujui', ditolak: 'Ditolak' };
+    const formatted = data.map(item => ({
+      no: null,
+      tanggal: item.tanggal,
+      nama: item.siswa?.nama || '-',
+      nis: item.siswa?.nis || '-',
+      kelas: item.kelas?.nama || '-',
+      jenisIzin: jenisMap[item.jenisIzin] || item.jenisIzin,
+      jam: item.jam || '-',
+      alasan: item.alasan || '-',
+      status: statusMap[item.status] || item.status,
+      petugas: item.guruPiket?.nama || '-'
+    }));
+
+    res.json(formatted);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal memuat laporan izin siswa.' });
+  }
+});
+
 module.exports = router;

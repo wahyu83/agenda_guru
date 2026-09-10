@@ -49,6 +49,10 @@ const PiketLayout = () => {
           <FileText size={22} />
           <span>Izin Siswa</span>
         </NavLink>
+        <NavLink to="/piket/laporan" className={isActive('/piket/laporan') ? 'nav-item active' : 'nav-item'}>
+          <FileText size={22} />
+          <span>Laporan</span>
+        </NavLink>
       </nav>
 
       {showProfile && user && (

@@ -141,4 +141,43 @@ router.get('/rekap-hari-ini', async (req, res) => {
   }
 });
 
+// GET laporan piket (rekap kehadiran guru di kelas) berdasarkan rentang tanggal
+router.get('/laporan', async (req, res) => {
+  try {
+    const { tanggalDari, tanggalSampai } = req.query;
+    const from = toUTCDate(tanggalDari || '1970-01-01');
+    const to = toUTCDate(tanggalSampai || todayLocalStr());
+    // to inclusive: tambah 1 hari agar termasuk tanggal sampai
+    const toEnd = new Date(to.getTime() + 24 * 60 * 60 * 1000);
+
+    const data = await prisma.piket.findMany({
+      where: { tanggal: { gte: from, lt: toEnd } },
+      include: {
+        pengampu: { include: { guru: true, kelas: true, mapel: true } },
+        piketBy: { select: { id: true, nama: true, nip: true } }
+      },
+      orderBy: [{ tanggal: 'desc' }, { pengampu: { jamKe: 'asc' } }]
+    });
+
+    const statusLabels = { hadir: 'Hadir', terlambat: 'Terlambat', tidak_hadir: 'Tidak Hadir' };
+    const formatted = data.map(p => ({
+      no: null,
+      tanggal: p.tanggal,
+      guru: p.pengampu?.guru?.nama || '-',
+      nip: p.pengampu?.guru?.nip || '-',
+      kelas: p.pengampu?.kelas?.nama || '-',
+      mapel: p.pengampu?.mapel?.nama || '-',
+      jamKe: p.pengampu?.jamKe || '-',
+      status: statusLabels[p.status] || p.status,
+      catatan: p.catatan || '-',
+      petugas: p.piketBy?.nama || '-'
+    }));
+
+    res.json(formatted);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal memuat laporan piket.' });
+  }
+});
+
 module.exports = router;

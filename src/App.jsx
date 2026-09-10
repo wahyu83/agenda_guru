@@ -37,6 +37,7 @@ import RencanaScreen from './features/guru/pages/RencanaScreen';
 import PiketLayout from './features/piket/PiketLayout';
 import PiketScreen from './features/piket/PiketScreen';
 import IzinSiswaScreen from './features/piket/IzinSiswaScreen';
+import LaporanPiket from './features/piket/pages/LaporanPiket';
 
 // Guru BK
 import BkLayout from './features/bk/BkLayout';
@@ -101,6 +102,7 @@ function App() {
         <Route path="/piket" element={<PiketLayout />}>
           <Route index element={<PiketScreen />} />
           <Route path="izin-siswa" element={<IzinSiswaScreen />} />
+          <Route path="laporan" element={<LaporanPiket />} />
         </Route>
 
         {/* Guru BK Routes */}
