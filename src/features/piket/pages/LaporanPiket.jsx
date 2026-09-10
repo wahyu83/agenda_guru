@@ -10,10 +10,19 @@ const MONTHS = [
   'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
 ];
 
+// Tanggal lokal hari ini dalam format YYYY-MM-DD
+const todayStr = () => {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
 const LaporanPiket = () => {
   const { user, settings, kelas, laporanPiketList, laporanIzinList, fetchLaporanPiketList, fetchLaporanIzinList, fetchMasterData } = useAppStore();
-  const [dariTanggal, setDariTanggal] = useState('');
-  const [sampaiTanggal, setSampaiTanggal] = useState('');
+  const [dariTanggal, setDariTanggal] = useState(todayStr());
+  const [sampaiTanggal, setSampaiTanggal] = useState(todayStr());
   const [selectedKelas, setSelectedKelas] = useState('');
 
   useEffect(() => {
@@ -191,8 +200,8 @@ const LaporanPiket = () => {
             {kelas.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
           </select>
           {(dariTanggal || sampaiTanggal || selectedKelas) && (
-            <button onClick={() => { setDariTanggal(''); setSampaiTanggal(''); setSelectedKelas(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-danger)', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8125rem' }}>
-              <X size={14} /> Reset
+            <button onClick={() => { setDariTanggal(todayStr()); setSampaiTanggal(todayStr()); setSelectedKelas(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-danger)', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8125rem' }}>
+                         <X size={14} /> Reset
             </button>
           )}
         </div>
