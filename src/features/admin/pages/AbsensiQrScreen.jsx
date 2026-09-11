@@ -13,8 +13,12 @@ const printCss = `
   .admin-layout { display: block !important; height: auto !important; overflow: visible !important; }
   .admin-main { overflow: visible !important; }
   .admin-content { overflow: visible !important; padding: 0 !important; }
+  /* Layout mobile (role Petugas Absensi) — jangan ikut disembunyikan saat cetak */
+  .mobile-layout { display: block !important; height: auto !important; max-width: none !important; box-shadow: none !important; overflow: visible !important; }
+  .mobile-content { display: block !important; overflow: visible !important; padding: 0 !important; }
   .kartu-print-area, .kartu-print-area * { visibility: visible !important; }
   .kartu-print-area {
+    display: block !important;
     padding: 0 !important;
     margin: 0 !important;
     background: #fff !important;
@@ -75,6 +79,9 @@ const AbsensiQrScreen = () => {
   const [durasiJam, setDurasiJam] = useState(8);
   const [sesiUrl, setSesiUrl] = useState('');
   const [showSesi, setShowSesi] = useState(false);
+
+  // Pratinjau kartu disembunyikan untuk role Petugas Absensi (tetap bisa cetak)
+  const isPetugasAbsensi = user?.role === 'petugas_absensi';
 
   useEffect(() => {
     if (kelas.length === 0) fetchMasterData();
@@ -277,16 +284,26 @@ const AbsensiQrScreen = () => {
           </p>
         </div>
 
-        <h2 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginTop: '0.5rem' }}>Pratinjau Kartu</h2>
+        {!isPetugasAbsensi && (
+          <h2 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginTop: '0.5rem' }}>Pratinjau Kartu</h2>
+        )}
       </div>
 
-      {/* Area cetak */}
+      {/* Area cetak (pratinjau disembunyikan untuk Petugas Absensi, tetap dicetak) */}
       {kartuSiswa.length === 0 ? (
-        <div className="no-print card" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-          Tidak ada siswa untuk kelas ini.
-        </div>
+        !isPetugasAbsensi && (
+          <div className="no-print card" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+            Tidak ada siswa untuk kelas ini.
+          </div>
+        )
       ) : (
-        <div className="kartu-print-area" style={{ boxShadow: 'var(--shadow-sm)', borderRadius: 'var(--radius-md)', overflowX: 'auto', padding: '1rem', backgroundColor: 'var(--surface-hover)' }}>
+        <div
+          className="kartu-print-area"
+          style={{
+            display: isPetugasAbsensi ? 'none' : undefined,
+            boxShadow: 'var(--shadow-sm)', borderRadius: 'var(--radius-md)', overflowX: 'auto', padding: '1rem', backgroundColor: 'var(--surface-hover)'
+          }}
+        >
           {pages.map((pageStudents, pi) => (
             <div key={pi} className="kartu-page">
               {pageStudents.map((s) => (
