@@ -30,6 +30,7 @@ export const useAppStore = create((set, get) => ({
   laporanIzinList: [],
   absensiHarian: [],
   absensiHarianRekap: null,
+  absensiHarianLaporan: [],
   kartuSiswa: [],
   scanSesi: [],
   user: JSON.parse(localStorage.getItem('user')) || null,
@@ -949,6 +950,19 @@ export const useAppStore = create((set, get) => ({
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Gagal memuat rekap absensi');
     set({ absensiHarianRekap: data });
+    return data;
+  },
+
+  // --- LAPORAN ABSENSI HARIAN ---
+  fetchAbsensiHarianLaporan: async (params = {}) => {
+    let url = `${API_BASE}/absensi-harian/laporan`;
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v) qs.append(k, v); });
+    if (qs.toString()) url += `?${qs.toString()}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal memuat laporan absensi');
+    set({ absensiHarianLaporan: data });
     return data;
   },
 

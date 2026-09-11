@@ -202,6 +202,52 @@ router.get('/rekap', async (req, res) => {
   }
 });
 
+// GET /laporan — rekap absensi harian berdasarkan rentang tanggal (untuk export)
+router.get('/laporan', async (req, res) => {
+  try {
+    const { tanggalDari, tanggalSampai, kelasId, status } = req.query;
+    const from = toUTCDate(tanggalDari || todayLocalStr());
+    const to = toUTCDate(tanggalSampai || tanggalDari || todayLocalStr());
+    const toEnd = new Date(to.getTime() + 24 * 60 * 60 * 1000);
+
+    const data = await prisma.absensiHarian.findMany({
+      where: {
+        tanggal: { gte: from, lt: toEnd },
+        ...(status ? { status } : {}),
+        ...(kelasId ? { siswa: { enrollment: { some: { kelasId: parseInt(kelasId) } } } } : {})
+      },
+      include: { siswa: { include: { enrollment: { include: { kelas: true } } } } },
+      orderBy: [{ tanggal: 'asc' }, { jamMasuk: 'asc' }]
+    });
+
+    const fmtTanggal = (d) => {
+      const dt = new Date(d);
+      return `${String(dt.getUTCDate()).padStart(2, '0')}/${String(dt.getUTCMonth() + 1).padStart(2, '0')}/${dt.getUTCFullYear()}`;
+    };
+    const fmtJam = (d) => {
+      if (!d) return '-';
+      const dt = new Date(d);
+      return `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+    };
+
+    const formatted = data.map(a => ({
+      no: null,
+      tanggal: fmtTanggal(a.tanggal),
+      nama: a.siswa?.nama || '-',
+      nis: a.siswa?.nis || '-',
+      kelas: kelasSiswa(a.siswa),
+      status: a.status === 'terlambat' ? 'Terlambat' : 'Hadir',
+      jamMasuk: fmtJam(a.jamMasuk),
+      keterangan: a.keterangan || '-'
+    }));
+
+    res.json(formatted);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal memuat laporan absensi.' });
+  }
+});
+
 // GET /kartu?kelasId= — daftar siswa (untuk cetak kartu QR), buat token bila belum ada
 router.get('/kartu', async (req, res) => {
   try {

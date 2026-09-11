@@ -144,6 +144,7 @@ const GuruScreen = () => {
                 <option value="guru">Guru</option>
                 <option value="guru_piket">Guru Piket</option>
                 <option value="guru_bk">Guru BK</option>
+                <option value="petugas_absensi">Petugas Absensi</option>
               </select>
             </div>
             <div className="md:col-span-2 flex gap-2 justify-end mt-2">
@@ -174,11 +175,11 @@ const GuruScreen = () => {
                 <td style={{ padding: '1rem' }}>
                   <span style={{
                     fontSize: '0.75rem', padding: '0.15rem 0.5rem', borderRadius: 'var(--radius-full)',
-                    backgroundColor: item.role === 'guru_piket' ? 'var(--warning)20' : item.role === 'guru_bk' ? 'var(--info)20' : 'var(--primary-light)',
-                    color: item.role === 'guru_piket' ? 'var(--warning)' : item.role === 'guru_bk' ? 'var(--info)' : 'var(--primary)',
+                    backgroundColor: item.role === 'guru_piket' ? 'var(--warning)20' : item.role === 'guru_bk' ? 'var(--info)20' : item.role === 'petugas_absensi' ? 'var(--success)20' : 'var(--primary-light)',
+                    color: item.role === 'guru_piket' ? 'var(--warning)' : item.role === 'guru_bk' ? 'var(--info)' : item.role === 'petugas_absensi' ? 'var(--success)' : 'var(--primary)',
                     fontWeight: '600'
                   }}>
-                    {item.role === 'guru_piket' ? 'Guru Piket' : item.role === 'guru_bk' ? 'Guru BK' : 'Guru'}
+                    {item.role === 'guru_piket' ? 'Guru Piket' : item.role === 'guru_bk' ? 'Guru BK' : item.role === 'petugas_absensi' ? 'Petugas Absensi' : 'Guru'}
                   </span>
                 </td>
                 <td style={{ padding: '1rem', textAlign: 'right' }}>

@@ -24,6 +24,8 @@ import AbsensiQrScreen from './features/admin/pages/AbsensiQrScreen';
 
 // Absensi mandiri (publik)
 import ScanAbsen from './features/absensi/ScanAbsen';
+import AbsensiLayout from './features/absensi/AbsensiLayout';
+import LaporanAbsensi from './features/absensi/pages/LaporanAbsensi';
 
 // Guru Pages
 import GuruDashboard from './features/guru/pages/GuruDashboard';
@@ -111,6 +113,12 @@ function App() {
           <Route index element={<PiketScreen />} />
           <Route path="izin-siswa" element={<IzinSiswaScreen />} />
           <Route path="laporan" element={<LaporanPiket />} />
+        </Route>
+
+        {/* Petugas Absensi Routes */}
+        <Route path="/absensi" element={<AbsensiLayout />}>
+          <Route index element={<AbsensiQrScreen />} />
+          <Route path="laporan" element={<LaporanAbsensi />} />
         </Route>
 
         {/* Guru BK Routes */}

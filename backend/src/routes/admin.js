@@ -47,7 +47,7 @@ router.put('/tahun-pelajaran/:id/active', async (req, res) => {
 router.get('/guru', async (req, res) => {
   const data = await prisma.user.findMany({
     where: {
-      role: { in: ['guru', 'guru_piket', 'guru_bk'] }
+      role: { in: ['guru', 'guru_piket', 'guru_bk', 'petugas_absensi'] }
     },
     orderBy: { nama: 'asc' }
   });

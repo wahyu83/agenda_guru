@@ -24,6 +24,8 @@ const LoginScreen = () => {
         navigate('/piket', { replace: true });
       } else if (user.role === 'guru_bk') {
         navigate('/bk', { replace: true });
+      } else if (user.role === 'petugas_absensi') {
+        navigate('/absensi', { replace: true });
       } else {
         navigate('/guru', { replace: true });
       }
@@ -61,6 +63,8 @@ const LoginScreen = () => {
         navigate('/piket');
       } else if (data.role === 'guru_bk') {
         navigate('/bk');
+      } else if (data.role === 'petugas_absensi') {
+        navigate('/absensi');
       } else {
         navigate('/guru');
       }
