@@ -230,7 +230,42 @@ pm2 status
 
 Setelah semua langkah selesai, buka aplikasi di browser untuk memastikan perubahan sudah aktif.
 
-### Ringkasan Cepat (Copy-Paste)
+### PENTING — Update skema database
+Jika `npx prisma db push` berhenti dengan peringatan **"There might be data loss"**, itu artinya ada perubahan skema yang perlu ditinjau. Untuk kolom/index baru yang aman (mis. kolom nullable baru atau unique index pada kolom baru), jalankan:
+
 ```bash
-cd /var/www/agenda-guru && git pull origin master && cd backend && npm install && npx prisma generate && npx prisma db push && pm2 restart agenda-backend && cd .. && npm install && npm run build
+npx prisma db push --accept-data-loss
+```
+
+Bila ragu, lihat dulu perubahannya tanpa menerapkan apa pun:
+
+```bash
+npx prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --script
+```
+
+Pastikan hanya ada `ADD COLUMN` / `CREATE TABLE` / `CREATE INDEX` (aman). Jika ada `DROP`/`ALTER ... DROP`, jangan lanjut tanpa backup.
+
+Selalu buat backup sebelum update:
+```bash
+mkdir -p /root/backups && pg_dump -h localhost -U admin_agenda agenda_guru > /root/backups/pre-update-$(date +%F-%H%M%S).sql
+```
+
+### Ringkasan Cepat (Copy-Paste)
+> Catatan: perintah dijalankan **terpisah** (bukan satu `&&` panjang), agar bila langkah DB perlu penanganan, build & restart tetap berjalan.
+
+```bash
+# 1) Kode terbaru
+cd /var/www/agenda-guru && git pull origin master
+
+# 2) Backend
+cd /var/www/agenda-guru/backend && npm install && npx prisma generate && npx prisma db push
+
+# 3) Jika muncul peringatan data loss (lihat panduan di atas), jalankan:
+#    npx prisma db push --accept-data-loss
+
+# 4) Restart backend
+pm2 restart agenda-backend
+
+# 5) Frontend
+cd /var/www/agenda-guru && npm install && npm run build
 ```
