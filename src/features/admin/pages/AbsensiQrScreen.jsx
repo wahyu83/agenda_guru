@@ -54,6 +54,8 @@ const printCss = `
   overflow: hidden;
   box-sizing: border-box;
 }
+.kartu-header { display: flex; align-items: center; justify-content: center; gap: 1.5mm; margin-bottom: 0.5mm; }
+.kartu-logo { width: 7mm; height: 7mm; object-fit: contain; flex-shrink: 0; }
 .kartu-school { font-size: 2.6mm; font-weight: 700; text-transform: uppercase; color: #333; letter-spacing: 0.2mm; }
 .kartu-label { font-size: 2.2mm; color: #777; margin-bottom: 1mm; }
 .kartu-qr { width: 34mm; height: 34mm; margin: 1mm 0; }
@@ -221,7 +223,12 @@ const AbsensiQrScreen = () => {
             <div key={pi} className="kartu-page">
               {pageStudents.map((s) => (
                 <div key={s.id} className="kartu-siswa">
-                  <div className="kartu-school">{settings?.namaSekolah || 'SEKOLAH'}</div>
+                  <div className="kartu-header">
+                    {settings?.logoPath && (
+                      <img className="kartu-logo" src={settings.logoPath} alt="Logo" />
+                    )}
+                    <div className="kartu-school">{settings?.namaSekolah || 'SEKOLAH'}</div>
+                  </div>
                   <div className="kartu-label">KARTU ABSENSI SISWA</div>
                   {qrMap[s.id] ? (
                     <img className="kartu-qr" src={qrMap[s.id]} alt={`QR ${s.nama}`} />
@@ -231,7 +238,7 @@ const AbsensiQrScreen = () => {
                     </div>
                   )}
                   <div className="kartu-nama">{s.nama}</div>
-                  <div className="kartu-meta">{s.nis}{s.kelas && s.kelas !== '-' ? ` · ${s.kelas}` : ''}</div>
+                  <div className="kartu-meta">{s.kelas && s.kelas !== '-' ? s.kelas : ''}</div>
                 </div>
               ))}
             </div>
