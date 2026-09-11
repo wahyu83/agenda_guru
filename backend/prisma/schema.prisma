@@ -267,3 +267,12 @@ model AbsensiHarian {
 
   @@unique([siswaId, tanggal])
 }
+
+model ScanSession {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  petugas   String?
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+}

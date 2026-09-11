@@ -4,12 +4,15 @@ import { QrCode, CheckCircle2, Clock, AlertTriangle, Camera, CameraOff, XCircle,
 import { useAppStore } from '../../lib/store';
 
 const ScanAbsen = () => {
-  const { scanAbsensiSiswa, settings, fetchSettings } = useAppStore();
+  const { scanAbsensiSiswa, settings, fetchSettings, cekScanSesi } = useAppStore();
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
   const [scanning, setScanning] = useState(false);
   const [manualToken, setManualToken] = useState('');
   const [showManual, setShowManual] = useState(false);
+  const [sesiValid, setSesiValid] = useState(null); // null=memeriksa, true/false
+  const [sesiInfo, setSesiInfo] = useState(null);
+  const [sesiToken] = useState(() => new URLSearchParams(window.location.search).get('t') || '');
 
   const scannerRef = useRef(null);
   const lastScanRef = useRef(0);
@@ -18,6 +21,22 @@ const ScanAbsen = () => {
   useEffect(() => {
     fetchSettings();
   }, [fetchSettings]);
+
+  // Validasi sesi saat halaman dibuka
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      if (!sesiToken) { setSesiValid(false); return; }
+      try {
+        const info = await cekScanSesi(sesiToken);
+        if (!cancelled) { setSesiInfo(info); setSesiValid(true); }
+      } catch {
+        if (!cancelled) setSesiValid(false);
+      }
+    };
+    check();
+    return () => { cancelled = true; };
+  }, [sesiToken, cekScanSesi]);
 
   // Beep sederhana via Web Audio API
   const playBeep = (ok) => {
@@ -46,7 +65,7 @@ const ScanAbsen = () => {
     if (now - lastScanRef.current < 1800) return; // debounce
     lastScanRef.current = now;
     try {
-      const data = await scanAbsensiSiswa(token.trim());
+      const data = await scanAbsensiSiswa(token.trim(), sesiToken);
       setResult(data);
       playBeep(!data.already);
       setError('');
@@ -90,13 +109,14 @@ const ScanAbsen = () => {
   };
 
   useEffect(() => {
+    if (sesiValid !== true) return;
     startScan();
     return () => {
       clearTimeout(resetTimerRef.current);
       stopScan();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [sesiValid]);
 
   const statusInfo = (s) => s === 'terlambat'
     ? { label: 'TERLAMBAT', color: 'var(--warning)', icon: <Clock size={40} /> }
@@ -107,6 +127,48 @@ const ScanAbsen = () => {
     const dt = new Date(d);
     return `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
   };
+
+  const shell = (children) => (
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)', padding: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
+      <div style={{ textAlign: 'center', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+        {settings?.logoPath && (
+          <img
+            src={settings.logoPath}
+            alt="Logo Sekolah"
+            style={{ width: '72px', height: '72px', objectFit: 'contain', backgroundColor: 'white', borderRadius: 'var(--radius-md)', padding: '0.35rem', boxShadow: 'var(--shadow-md)' }}
+          />
+        )}
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Absensi Siswa</h1>
+        <p style={{ fontSize: '0.875rem', opacity: 0.9 }}>{settings?.namaSekolah || 'Scan Kartu QR'}</p>
+      </div>
+      {children}
+    </div>
+  );
+
+  // Layar: memeriksa sesi
+  if (sesiValid === null) {
+    return shell(
+      <div style={{ width: '100%', maxWidth: '480px', background: 'white', borderRadius: 'var(--radius-lg)', padding: '2rem', textAlign: 'center', boxShadow: 'var(--shadow-lg)' }}>
+        <Camera size={36} style={{ color: 'var(--primary)' }} />
+        <p style={{ marginTop: '0.5rem', color: 'var(--text-muted)' }}>Memeriksa sesi scan...</p>
+      </div>
+    );
+  }
+
+  // Layar: sesi tidak valid
+  if (sesiValid === false) {
+    return shell(
+      <div style={{ width: '100%', maxWidth: '480px', background: 'white', borderRadius: 'var(--radius-lg)', padding: '2rem', textAlign: 'center', boxShadow: 'var(--shadow-lg)' }}>
+        <XCircle size={48} style={{ color: 'var(--danger)' }} />
+        <h2 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginTop: '0.75rem' }}>Sesi Tidak Valid</h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '0.5rem' }}>
+          {sesiToken
+            ? 'Tautan sesi scan sudah berakhir atau ditutup. Minta tautan baru ke petugas/admin.'
+            : 'Halaman ini perlu dibuka lewat tautan sesi scan dari admin. Silakan minta tautan terbaru.'}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)', padding: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
@@ -120,10 +182,14 @@ const ScanAbsen = () => {
         )}
         <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Absensi Siswa</h1>
         <p style={{ fontSize: '0.875rem', opacity: 0.9 }}>{settings?.namaSekolah || 'Scan Kartu QR'}</p>
+        {sesiInfo?.expiresAt && (
+          <span style={{ fontSize: '0.75rem', backgroundColor: 'rgba(255,255,255,0.2)', padding: '0.15rem 0.6rem', borderRadius: 'var(--radius-full)' }}>
+            Sesi aktif sampai {new Date(sesiInfo.expiresAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+          </span>
+        )}
       </div>
 
       <div style={{ width: '100%', maxWidth: '520px', background: 'white', borderRadius: 'var(--radius-lg)', padding: '1rem', boxShadow: 'var(--shadow-lg)' }}>
-        {/* Area kamera */}
         <div style={{ position: 'relative', borderRadius: 'var(--radius-md)', overflow: 'hidden', backgroundColor: '#000' }}>
           <div id="qr-reader" style={{ width: '100%' }} />
           {!scanning && (

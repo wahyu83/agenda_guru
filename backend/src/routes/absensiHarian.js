@@ -27,14 +27,89 @@ const todayLocalStr = () => {
 };
 
 const genToken = () => crypto.randomBytes(8).toString('hex');
+const genSessionToken = () => crypto.randomBytes(16).toString('hex');
 
 // Ambil kelas utama siswa (enrollment pertama)
 const kelasSiswa = (siswa) => siswa?.enrollment?.[0]?.kelas?.nama || '-';
 
-// POST /scan — siswa scan kartu QR (mandiri)
+// Validasi sesi scan; kembalikan objek sesi bila valid, null bila tidak
+const validateSession = async (token) => {
+  if (!token) return null;
+  const session = await prisma.scanSession.findUnique({ where: { token } });
+  if (!session) return null;
+  if (session.revoked) return null;
+  if (new Date(session.expiresAt).getTime() < Date.now()) return null;
+  return session;
+};
+
+// --- SESI SCAN (berbatas waktu) ---
+// POST /sesi — buka sesi scan baru (admin/petugas)
+router.post('/sesi', async (req, res) => {
+  try {
+    const { durasiJam, petugas } = req.body || {};
+    const jam = Number(durasiJam) > 0 ? Number(durasiJam) : 8;
+    const token = genSessionToken();
+    const expiresAt = new Date(Date.now() + jam * 60 * 60 * 1000);
+    const session = await prisma.scanSession.create({
+      data: { token, expiresAt, petugas: petugas || null }
+    });
+    res.json(session);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal membuat sesi scan.' });
+  }
+});
+
+// GET /sesi — daftar sesi scan aktif
+router.get('/sesi', async (req, res) => {
+  try {
+    const data = await prisma.scanSession.findMany({
+      where: { revoked: false, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal memuat sesi scan.' });
+  }
+});
+
+// DELETE /sesi/:id — tutup (cabut) sesi scan
+router.delete('/sesi/:id', async (req, res) => {
+  try {
+    await prisma.scanSession.update({
+      where: { id: parseInt(req.params.id) },
+      data: { revoked: true }
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ error: 'Gagal menutup sesi scan.' });
+  }
+});
+
+// GET /sesi/cek?token= — validasi token sesi (untuk halaman scan)
+router.get('/sesi/cek', async (req, res) => {
+  try {
+    const session = await validateSession(req.query.token);
+    if (!session) return res.status(401).json({ valid: false, error: 'Sesi tidak valid atau sudah berakhir.' });
+    res.json({ valid: true, expiresAt: session.expiresAt, petugas: session.petugas });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal memvalidasi sesi.' });
+  }
+});
+
+// POST /scan — siswa scan kartu QR (mandiri), wajib sesi scan yang valid
 router.post('/scan', async (req, res) => {
   try {
-    const { token } = req.body || {};
+    const { token, sessionToken } = req.body || {};
+
+    const session = await validateSession(sessionToken);
+    if (!session) {
+      return res.status(401).json({ error: 'Sesi scan tidak valid atau sudah berakhir. Minta tautan baru ke petugas.' });
+    }
+
     if (!token) return res.status(400).json({ error: 'QR tidak valid.' });
 
     const siswa = await prisma.siswa.findUnique({

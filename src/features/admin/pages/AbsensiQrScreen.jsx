@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
-import { Printer, RefreshCw, QrCode, Users, CheckCircle2, Clock, AlertTriangle, Trash2, ExternalLink } from 'lucide-react';
+import { Printer, RefreshCw, QrCode, Users, CheckCircle2, Clock, AlertTriangle, Trash2, ExternalLink, Link2, Copy, PowerOff, Timer, X } from 'lucide-react';
 import { useAppStore } from '../../../lib/store';
 
 const KARTU_PER_HALAMAN = 8;
@@ -65,16 +65,49 @@ const printCss = `
 
 const AbsensiQrScreen = () => {
   const {
-    kelas, settings, kartuSiswa, absensiHarian, absensiHarianRekap,
-    fetchMasterData, fetchKartuSiswa, fetchAbsensiHarian, fetchAbsensiHarianRekap, deleteAbsensiHarian
+    kelas, settings, user, kartuSiswa, absensiHarian, absensiHarianRekap, scanSesi,
+    fetchMasterData, fetchKartuSiswa, fetchAbsensiHarian, fetchAbsensiHarianRekap, deleteAbsensiHarian,
+    fetchScanSesi, createScanSesi, closeScanSesi
   } = useAppStore();
   const [selectedKelas, setSelectedKelas] = useState('');
   const [qrMap, setQrMap] = useState({});
   const [loadingQr, setLoadingQr] = useState(false);
+  const [durasiJam, setDurasiJam] = useState(8);
+  const [sesiUrl, setSesiUrl] = useState('');
+  const [showSesi, setShowSesi] = useState(false);
 
   useEffect(() => {
     if (kelas.length === 0) fetchMasterData();
   }, [fetchMasterData, kelas.length]);
+
+  useEffect(() => {
+    fetchScanSesi();
+  }, [fetchScanSesi]);
+
+  const handleBukaSesi = async () => {
+    try {
+      const sesi = await createScanSesi(Number(durasiJam), user?.nama || '');
+      const url = `${window.location.origin}/scan?t=${sesi.token}`;
+      setSesiUrl(url);
+      setShowSesi(true);
+    } catch (err) {
+      alert(err.message || 'Gagal membuat sesi scan.');
+    }
+  };
+
+  const copyUrl = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      alert('Tautan disalin.');
+    } catch {
+      window.prompt('Salin tautan berikut:', text);
+    }
+  };
+
+  const formatWaktu = (d) => {
+    if (!d) return '-';
+    return new Date(d).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  };
 
   useEffect(() => {
     fetchKartuSiswa(selectedKelas);
@@ -134,13 +167,48 @@ const AbsensiQrScreen = () => {
             <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Absensi QR Siswa</h1>
             <p style={{ color: 'var(--text-muted)' }}>Cetak kartu absensi QR (A4, 8 siswa/halaman) dan pantau kehadiran siswa hari ini.</p>
           </div>
-          <div className="flex gap-2">
-            <a className="btn btn-secondary" href="/scan" target="_blank" rel="noreferrer"><ExternalLink size={16} /> Halaman Scan</a>
-            <button className="btn btn-primary" onClick={handlePrint} disabled={kartuSiswa.length === 0}>
+          <div className="flex gap-2 flex-wrap">
+            <select className="input" style={{ width: 'auto' }} value={durasiJam} onChange={(e) => setDurasiJam(e.target.value)}>
+              <option value={1}>1 jam</option>
+              <option value={4}>4 jam</option>
+              <option value={8}>8 jam</option>
+              <option value={24}>24 jam</option>
+            </select>
+            <button className="btn btn-primary" onClick={handleBukaSesi}>
+              <Link2 size={16} /> Buka Sesi Scan
+            </button>
+            <button className="btn btn-secondary" onClick={handlePrint} disabled={kartuSiswa.length === 0}>
               <Printer size={16} /> Cetak Kartu
             </button>
           </div>
         </div>
+
+        {/* Sesi scan aktif */}
+        {scanSesi.length > 0 && (
+          <div className="card" style={{ padding: '1rem', border: '1px solid var(--success)' }}>
+            <h3 style={{ fontSize: '0.9375rem', fontWeight: 'bold', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Timer size={16} style={{ color: 'var(--success)' }} /> Sesi Scan Aktif ({scanSesi.length})
+            </h3>
+            <div className="flex flex-col gap-2">
+              {scanSesi.map((s) => {
+                const url = `${window.location.origin}/scan?t=${s.token}`;
+                return (
+                  <div key={s.id} className="flex justify-between items-center gap-2 flex-wrap" style={{ padding: '0.5rem 0.75rem', backgroundColor: 'var(--surface-hover)', borderRadius: 'var(--radius-md)' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ fontSize: '0.8125rem', fontWeight: '600' }}>Sesi #{s.id}{s.petugas ? ` · ${s.petugas}` : ''}</p>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Berlaku sampai {formatWaktu(s.expiresAt)}</p>
+                    </div>
+                    <div className="flex gap-1">
+                      <button className="btn btn-secondary" style={{ padding: '0.35rem' }} title="Salin tautan" onClick={() => copyUrl(url)}><Copy size={14} /></button>
+                      <a className="btn btn-secondary" style={{ padding: '0.35rem' }} title="Buka halaman scan" href={url} target="_blank" rel="noreferrer"><ExternalLink size={14} /></a>
+                      <button className="btn btn-secondary" style={{ padding: '0.35rem', color: 'var(--danger)' }} title="Tutup sesi" onClick={() => { if (window.confirm('Tutup sesi scan ini? Perangkat kiosk tidak bisa scan lagi sampai sesi baru dibuka.')) closeScanSesi(s.id); }}><PowerOff size={14} /></button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Filter */}
         <div className="card" style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -205,7 +273,7 @@ const AbsensiQrScreen = () => {
         <div className="card" style={{ padding: '1rem', backgroundColor: 'var(--info)15', border: '1px solid var(--info)30' }}>
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
             <QrCode size={14} style={{ verticalAlign: 'middle', marginRight: '0.35rem', color: 'var(--info)' }} />
-            Cetak kartu, bagikan ke siswa, lalu buka <strong>Halaman Scan</strong> di perangkat (HP/tablet) yang terhubung kamera untuk mencatat kehadiran secara mandiri.
+            Klik <strong>Buka Sesi Scan</strong> untuk menghasilkan tautan scan berbatas waktu, buka tautan itu di perangkat kiosk (HP/tablet), lalu siswa scan kartu. Tautan otomatis tidak berlaku setelah waktunya habis atau saat sesi ditutup.
           </p>
         </div>
 
@@ -243,6 +311,31 @@ const AbsensiQrScreen = () => {
               ))}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Modal tautan sesi baru */}
+      {showSesi && sesiUrl && (
+        <div className="modal-backdrop">
+          <div className="modal-content animate-fade-in" style={{ width: '100%', maxWidth: '520px' }}>
+            <div className="flex justify-between items-center" style={{ marginBottom: '1rem' }}>
+              <h2 style={{ fontSize: '1.125rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Link2 size={18} /> Tautan Sesi Scan
+              </h2>
+              <button onClick={() => setShowSesi(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+            </div>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+              Buka tautan ini di perangkat kiosk. Berlaku terbatas sesuai durasi yang dipilih dan bisa ditutup kapan saja.
+            </p>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <input className="input" readOnly value={sesiUrl} onFocus={(e) => e.target.select()} />
+              <button className="btn btn-primary" onClick={() => copyUrl(sesiUrl)}><Copy size={16} /></button>
+            </div>
+            <div className="flex justify-end gap-2" style={{ marginTop: '1rem' }}>
+              <a className="btn btn-secondary" href={sesiUrl} target="_blank" rel="noreferrer"><ExternalLink size={16} /> Buka</a>
+              <button className="btn btn-primary" onClick={() => setShowSesi(false)}>Selesai</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

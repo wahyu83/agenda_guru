@@ -31,6 +31,7 @@ export const useAppStore = create((set, get) => ({
   absensiHarian: [],
   absensiHarianRekap: null,
   kartuSiswa: [],
+  scanSesi: [],
   user: JSON.parse(localStorage.getItem('user')) || null,
 
   setUser: (userData) => set({ user: userData }),
@@ -951,14 +952,48 @@ export const useAppStore = create((set, get) => ({
     return data;
   },
 
-  scanAbsensiSiswa: async (token) => {
+  scanAbsensiSiswa: async (token, sessionToken) => {
     const res = await fetch(`${API_BASE}/absensi-harian/scan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token })
+      body: JSON.stringify({ token, sessionToken })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Gagal mencatat absensi');
+    return data;
+  },
+
+  // --- SESI SCAN BERBATAS WAKTU ---
+  fetchScanSesi: async () => {
+    const res = await fetch(`${API_BASE}/absensi-harian/sesi`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal memuat sesi scan');
+    set({ scanSesi: data });
+    return data;
+  },
+
+  createScanSesi: async (durasiJam, petugas) => {
+    const res = await fetch(`${API_BASE}/absensi-harian/sesi`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ durasiJam, petugas })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal membuat sesi scan');
+    set((state) => ({ scanSesi: [data, ...state.scanSesi] }));
+    return data;
+  },
+
+  closeScanSesi: async (id) => {
+    const res = await fetch(`${API_BASE}/absensi-harian/sesi/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Gagal menutup sesi scan');
+    set((state) => ({ scanSesi: state.scanSesi.filter((s) => s.id !== id) }));
+  },
+
+  cekScanSesi: async (token) => {
+    const res = await fetch(`${API_BASE}/absensi-harian/sesi/cek?token=${encodeURIComponent(token)}`);
+    const data = await res.json();
+    if (!res.ok || !data.valid) throw new Error(data.error || 'Sesi tidak valid atau sudah berakhir.');
     return data;
   },
 
