@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Calendar, Users, BookOpen, GraduationCap, FileText, LogOut, Clock, Settings, DatabaseBackup } from 'lucide-react';
+import { LayoutDashboard, Calendar, Users, BookOpen, GraduationCap, FileText, LogOut, Clock, Settings, DatabaseBackup, QrCode } from 'lucide-react';
 import { useAppStore } from '../../lib/store';
 import ProfileModal from '../../components/ProfileModal';
 
@@ -36,6 +36,7 @@ const AdminLayout = () => {
     { name: 'Mata Pelajaran', path: '/admin/mapel', icon: <BookOpen size={20} /> },
     { name: 'Data Kelas', path: '/admin/kelas', icon: <LayoutDashboard size={20} /> },
     { name: 'Data Siswa', path: '/admin/siswa', icon: <GraduationCap size={20} /> },
+    { name: 'Absensi QR', path: '/admin/absensi-qr', icon: <QrCode size={20} /> },
     { name: 'Laporan', path: '/admin/laporan', icon: <FileText size={20} /> },
     { name: 'Jam Pelajaran', path: '/admin/jam-pelajaran', icon: <Clock size={20} /> },
     { name: 'Pengaturan Sekolah', path: '/admin/settings', icon: <Settings size={20} /> },

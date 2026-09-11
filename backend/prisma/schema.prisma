@@ -56,6 +56,7 @@ model Siswa {
   id         Int                @id @default(autoincrement())
   nis        String             @unique
   nama       String
+  qrToken    String?            @unique
   absensi    AbsensiSiswa[]
   enrollment Enrollment[]
   nilai      Nilai[]
@@ -63,6 +64,7 @@ model Siswa {
   bkKasus    BkKasus[]
   bkKonseling BkKonseling[]
   bkBimbinganPeserta BkBimbinganPeserta[]
+  absensiHarian AbsensiHarian[]
 }
 
 model Enrollment {
@@ -251,4 +253,17 @@ model BkBimbinganPeserta {
   siswa        Siswa       @relation(fields: [siswaId], references: [id], onDelete: Cascade)
 
   @@unique([bimbinganId, siswaId])
+}
+
+model AbsensiHarian {
+  id         Int      @id @default(autoincrement())
+  siswaId    Int
+  tanggal    DateTime @db.Date
+  jamMasuk   DateTime @default(now())
+  status     String   @default("hadir") // "hadir" | "terlambat"
+  keterangan String?
+  createdAt  DateTime @default(now())
+  siswa      Siswa    @relation(fields: [siswaId], references: [id], onDelete: Cascade)
+
+  @@unique([siswaId, tanggal])
 }

@@ -28,6 +28,9 @@ export const useAppStore = create((set, get) => ({
   bkLaporan: { kasus: [], konseling: [], bimbingan: [] },
   laporanPiketList: [],
   laporanIzinList: [],
+  absensiHarian: [],
+  absensiHarianRekap: null,
+  kartuSiswa: [],
   user: JSON.parse(localStorage.getItem('user')) || null,
 
   setUser: (userData) => set({ user: userData }),
@@ -925,5 +928,52 @@ export const useAppStore = create((set, get) => ({
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Gagal memuat laporan izin');
     set({ laporanIzinList: data });
+  },
+
+  // --- ABSENSI HARIAN SISWA (QR) ---
+  fetchAbsensiHarian: async (params = {}) => {
+    let url = `${API_BASE}/absensi-harian`;
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v) qs.append(k, v); });
+    if (qs.toString()) url += `?${qs.toString()}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal memuat absensi harian');
+    set({ absensiHarian: data });
+  },
+
+  fetchAbsensiHarianRekap: async (tanggal = '') => {
+    const url = tanggal ? `${API_BASE}/absensi-harian/rekap?tanggal=${tanggal}` : `${API_BASE}/absensi-harian/rekap`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal memuat rekap absensi');
+    set({ absensiHarianRekap: data });
+    return data;
+  },
+
+  scanAbsensiSiswa: async (token) => {
+    const res = await fetch(`${API_BASE}/absensi-harian/scan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal mencatat absensi');
+    return data;
+  },
+
+  fetchKartuSiswa: async (kelasId = '') => {
+    const url = kelasId ? `${API_BASE}/absensi-harian/kartu?kelasId=${kelasId}` : `${API_BASE}/absensi-harian/kartu`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal memuat kartu siswa');
+    set({ kartuSiswa: data });
+    return data;
+  },
+
+  deleteAbsensiHarian: async (id) => {
+    const res = await fetch(`${API_BASE}/absensi-harian/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Gagal menghapus absensi');
+    set((state) => ({ absensiHarian: state.absensiHarian.filter((a) => a.id !== id) }));
   }
 }));

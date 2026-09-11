@@ -20,6 +20,10 @@ import LaporanScreen from './features/admin/pages/LaporanScreen';
 import JamPelajaranScreen from './features/admin/pages/JamPelajaranScreen';
 import SettingsScreen from './features/admin/pages/SettingsScreen';
 import BackupScreen from './features/admin/pages/BackupScreen';
+import AbsensiQrScreen from './features/admin/pages/AbsensiQrScreen';
+
+// Absensi mandiri (publik)
+import ScanAbsen from './features/absensi/ScanAbsen';
 
 // Guru Pages
 import GuruDashboard from './features/guru/pages/GuruDashboard';
@@ -70,6 +74,9 @@ function App() {
         {/* Auth Route */}
         <Route path="/login" element={<LoginScreen />} />
 
+        {/* Absensi mandiri via QR (kiosk, tanpa login) */}
+        <Route path="/scan" element={<ScanAbsen />} />
+
         {/* Admin Routes */}
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
@@ -82,6 +89,7 @@ function App() {
           <Route path="jam-pelajaran" element={<JamPelajaranScreen />} />
           <Route path="settings" element={<SettingsScreen />} />
           <Route path="backup" element={<BackupScreen />} />
+          <Route path="absensi-qr" element={<AbsensiQrScreen />} />
         </Route>
 
         {/* Guru Routes */}
