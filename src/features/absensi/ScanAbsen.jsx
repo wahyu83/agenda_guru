@@ -4,7 +4,7 @@ import { QrCode, CheckCircle2, Clock, AlertTriangle, Camera, CameraOff, XCircle,
 import { useAppStore } from '../../lib/store';
 
 const ScanAbsen = () => {
-  const { scanAbsensiSiswa, settings } = useAppStore();
+  const { scanAbsensiSiswa, settings, fetchSettings } = useAppStore();
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
   const [scanning, setScanning] = useState(false);
@@ -14,6 +14,10 @@ const ScanAbsen = () => {
   const scannerRef = useRef(null);
   const lastScanRef = useRef(0);
   const resetTimerRef = useRef(null);
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
   // Beep sederhana via Web Audio API
   const playBeep = (ok) => {
@@ -106,7 +110,14 @@ const ScanAbsen = () => {
 
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)', padding: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-      <div style={{ textAlign: 'center', color: 'white' }}>
+      <div style={{ textAlign: 'center', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+        {settings?.logoPath && (
+          <img
+            src={settings.logoPath}
+            alt="Logo Sekolah"
+            style={{ width: '72px', height: '72px', objectFit: 'contain', backgroundColor: 'white', borderRadius: 'var(--radius-md)', padding: '0.35rem', boxShadow: 'var(--shadow-md)' }}
+          />
+        )}
         <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Absensi Siswa</h1>
         <p style={{ fontSize: '0.875rem', opacity: 0.9 }}>{settings?.namaSekolah || 'Scan Kartu QR'}</p>
       </div>
