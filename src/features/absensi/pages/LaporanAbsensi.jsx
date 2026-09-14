@@ -53,6 +53,7 @@ const LaporanAbsensi = () => {
     { header: 'Kelas', key: 'kelas' },
     { header: 'Status', key: 'status' },
     { header: 'Jam Masuk', key: 'jamMasuk' },
+    { header: 'Jam Pulang', key: 'jamPulang' },
     { header: 'Keterangan', key: 'keterangan' }
   ];
 
@@ -207,7 +208,7 @@ const LaporanAbsensi = () => {
                 <div>
                   <span style={{ fontWeight: '600', fontSize: '0.8125rem' }}>{a.nama}</span>
                   <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginLeft: '0.5rem' }}>{a.nis} · {a.kelas}</span>
-                  <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>{a.tanggal} · {a.jamMasuk}</p>
+                  <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>{a.tanggal} · Masuk {a.jamMasuk} · Pulang {a.jamPulang || '-'}</p>
                 </div>
                 <span style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem', borderRadius: 'var(--radius-full)', backgroundColor: a.status === 'Terlambat' ? 'var(--warning)20' : 'var(--success)20', color: a.status === 'Terlambat' ? 'var(--warning)' : 'var(--success)', fontWeight: '600' }}>
                   {a.status}

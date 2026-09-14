@@ -20,7 +20,8 @@ export const useAppStore = create((set, get) => ({
   laporanKelas: { agenda: [], absensi: [] },
   nilaiKelas: { nilai: [], pengampu: [] },
   jamPelajaran: [],
-  settings: { namaSekolah: 'SMK NEGERI 1 ARAHAN', alamat: 'Jl. Raya Arahan, Kabupaten Indramayu, Jawa Barat', logoPath: null },
+  settings: { namaSekolah: 'SMK NEGERI 1 ARAHAN', alamat: 'Jl. Raya Arahan, Kabupaten Indramayu, Jawa Barat', logoPath: null, jamMasukBuka: '06:30', jamMasukBatas: '07:00', jamMasukTutup: '09:00', jamPulangBuka: '13:00', jamPulangTutup: '17:00' },
+  absensiStatus: null,
   bkKasus: [],
   bkKonseling: [],
   bkBimbingan: [],
@@ -72,15 +73,15 @@ export const useAppStore = create((set, get) => ({
     }
   },
 
-  saveSettings: async (namaSekolah, alamat) => {
+  saveSettings: async (payload) => {
     const res = await fetch(`${API_BASE}/admin/settings`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ namaSekolah, alamat })
+      body: JSON.stringify(payload)
     });
     const data = await res.json();
     if (data && !data.error) {
-      set((state) => ({ settings: { ...state.settings, namaSekolah: data.namaSekolah, alamat: data.alamat } }));
+      set((state) => ({ settings: { ...state.settings, ...data, logoPath: data.logoPath || state.settings.logoPath } }));
     }
     return data;
   },
@@ -954,6 +955,14 @@ export const useAppStore = create((set, get) => ({
   },
 
   // --- LAPORAN ABSENSI HARIAN ---
+  fetchAbsensiStatus: async () => {
+    const res = await fetch(`${API_BASE}/absensi-harian/status`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal memuat status absensi');
+    set({ absensiStatus: data });
+    return data;
+  },
+
   fetchAbsensiHarianLaporan: async (params = {}) => {
     let url = `${API_BASE}/absensi-harian/laporan`;
     const qs = new URLSearchParams();

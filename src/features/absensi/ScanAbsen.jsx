@@ -4,7 +4,7 @@ import { QrCode, CheckCircle2, Clock, AlertTriangle, Camera, CameraOff, XCircle,
 import { useAppStore } from '../../lib/store';
 
 const ScanAbsen = () => {
-  const { scanAbsensiSiswa, settings, fetchSettings, cekScanSesi } = useAppStore();
+  const { scanAbsensiSiswa, settings, fetchSettings, cekScanSesi, absensiStatus, fetchAbsensiStatus } = useAppStore();
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
   const [scanning, setScanning] = useState(false);
@@ -21,6 +21,13 @@ const ScanAbsen = () => {
   useEffect(() => {
     fetchSettings();
   }, [fetchSettings]);
+
+  // Pantau mode absensi (masuk/pulang) — segarkan tiap menit
+  useEffect(() => {
+    fetchAbsensiStatus();
+    const id = setInterval(() => fetchAbsensiStatus(), 60000);
+    return () => clearInterval(id);
+  }, [fetchAbsensiStatus]);
 
   // Validasi sesi saat halaman dibuka
   useEffect(() => {
@@ -182,6 +189,15 @@ const ScanAbsen = () => {
         )}
         <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Absensi Siswa</h1>
         <p style={{ fontSize: '0.875rem', opacity: 0.9 }}>{settings?.namaSekolah || 'Scan Kartu QR'}</p>
+        {absensiStatus?.mode ? (
+          <span style={{ fontSize: '0.8125rem', fontWeight: '700', backgroundColor: 'rgba(255,255,255,0.95)', color: absensiStatus.mode === 'masuk' ? 'var(--primary)' : 'var(--secondary-hover)', padding: '0.2rem 0.75rem', borderRadius: 'var(--radius-full)' }}>
+            {absensiStatus.mode === 'masuk' ? 'ABSEN MASUK' : 'ABSEN PULANG'}
+          </span>
+        ) : (
+          <span style={{ fontSize: '0.8125rem', fontWeight: '600', backgroundColor: 'rgba(0,0,0,0.25)', padding: '0.2rem 0.75rem', borderRadius: 'var(--radius-full)' }}>
+            Di luar jam absensi
+          </span>
+        )}
         {sesiInfo?.expiresAt && (
           <span style={{ fontSize: '0.75rem', backgroundColor: 'rgba(255,255,255,0.2)', padding: '0.15rem 0.6rem', borderRadius: 'var(--radius-full)' }}>
             Sesi aktif sampai {new Date(sesiInfo.expiresAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
@@ -217,19 +233,28 @@ const ScanAbsen = () => {
         )}
 
         {/* Hasil scan */}
-        {result && (
-          <div style={{ marginTop: '1rem', padding: '1.25rem', borderRadius: 'var(--radius-md)', textAlign: 'center', backgroundColor: result.already ? 'var(--warning)15' : `${statusInfo(result.status).color}15`, border: `2px solid ${result.already ? 'var(--warning)' : statusInfo(result.status).color}` }}>
-            <div style={{ display: 'flex', justifyContent: 'center', color: result.already ? 'var(--warning)' : statusInfo(result.status).color }}>
-              {result.already ? <AlertTriangle size={40} /> : statusInfo(result.status).icon}
+        {result && (() => {
+          const isPulang = result.mode === 'pulang';
+          const mainColor = result.already ? 'var(--warning)' : (isPulang ? 'var(--info)' : statusInfo(result.status).color);
+          const mainLabel = isPulang ? 'ABSEN PULANG' : statusInfo(result.status).label;
+          return (
+            <div style={{ marginTop: '1rem', padding: '1.25rem', borderRadius: 'var(--radius-md)', textAlign: 'center', backgroundColor: `${mainColor}15`, border: `2px solid ${mainColor}` }}>
+              <div style={{ display: 'flex', justifyContent: 'center', color: mainColor }}>
+                {result.already ? <AlertTriangle size={40} /> : (isPulang ? <Clock size={40} /> : statusInfo(result.status).icon)}
+              </div>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginTop: '0.5rem' }}>{result.siswa?.nama}</h2>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{result.siswa?.nis} · {result.kelas}</p>
+              <p style={{ marginTop: '0.5rem', fontWeight: 'bold', color: mainColor }}>
+                {result.already ? `Sudah tercatat — ${mainLabel}` : mainLabel}
+              </p>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+                {isPulang
+                  ? `Datang ${formatJam(result.jamMasuk)} · Pulang ${formatJam(result.jamPulang)}`
+                  : `Jam ${formatJam(result.jamMasuk)}`}
+              </p>
             </div>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginTop: '0.5rem' }}>{result.siswa?.nama}</h2>
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{result.siswa?.nis} · {result.kelas}</p>
-            <p style={{ marginTop: '0.5rem', fontWeight: 'bold', color: result.already ? 'var(--warning)' : statusInfo(result.status).color }}>
-              {result.already ? `Sudah tercatat (${statusInfo(result.status).label})` : statusInfo(result.status).label}
-            </p>
-            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Jam {formatJam(result.jamMasuk)}</p>
-          </div>
-        )}
+          );
+        })()}
 
         {error && (
           <div style={{ marginTop: '1rem', padding: '1rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--danger)15', color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem' }}>

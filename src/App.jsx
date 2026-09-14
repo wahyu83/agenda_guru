@@ -92,6 +92,7 @@ function App() {
           <Route path="settings" element={<SettingsScreen />} />
           <Route path="backup" element={<BackupScreen />} />
           <Route path="absensi-qr" element={<AbsensiQrScreen />} />
+          <Route path="laporan-absensi" element={<LaporanAbsensi />} />
         </Route>
 
         {/* Guru Routes */}

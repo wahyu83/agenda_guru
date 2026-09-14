@@ -1,13 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, Upload, Trash2, School, Building2, Image as ImageIcon, Loader } from 'lucide-react';
+import { Save, Upload, Trash2, Building2, Image as ImageIcon, Loader, Clock } from 'lucide-react';
 import { useAppStore } from '../../../lib/store';
 
 const SettingsScreen = () => {
   const { settings, fetchSettings, saveSettings, saveSettingsLogo, deleteSettingsLogo } = useAppStore();
   const [namaSekolah, setNamaSekolah] = useState('');
   const [alamat, setAlamat] = useState('');
+  const [jam, setJam] = useState({
+    jamMasukBuka: '06:30', jamMasukBatas: '07:00', jamMasukTutup: '09:00',
+    jamPulangBuka: '13:00', jamPulangTutup: '17:00'
+  });
   const [logoPreview, setLogoPreview] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [savingJam, setSavingJam] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef(null);
 
@@ -18,6 +23,13 @@ const SettingsScreen = () => {
   useEffect(() => {
     if (settings.namaSekolah && !namaSekolah) setNamaSekolah(settings.namaSekolah);
     if (settings.alamat && !alamat) setAlamat(settings.alamat);
+    setJam({
+      jamMasukBuka: settings.jamMasukBuka || '06:30',
+      jamMasukBatas: settings.jamMasukBatas || '07:00',
+      jamMasukTutup: settings.jamMasukTutup || '09:00',
+      jamPulangBuka: settings.jamPulangBuka || '13:00',
+      jamPulangTutup: settings.jamPulangTutup || '17:00'
+    });
   }, [settings]);
 
   const handleSave = async (e) => {
@@ -28,12 +40,33 @@ const SettingsScreen = () => {
     }
     setSaving(true);
     try {
-      await saveSettings(namaSekolah.trim(), alamat.trim());
+      await saveSettings({ namaSekolah: namaSekolah.trim(), alamat: alamat.trim(), ...jam });
       alert('Pengaturan sekolah berhasil disimpan.');
     } catch (err) {
       alert('Gagal menyimpan pengaturan: ' + (err.message || 'Terjadi kesalahan'));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSaveJam = async (e) => {
+    e.preventDefault();
+    if (jam.jamMasukBuka > jam.jamMasukBatas || jam.jamMasukBatas > jam.jamMasukTutup) {
+      alert('Urutan jam masuk tidak valid. Pastikan: Buka ≤ Batas ≤ Tutup.');
+      return;
+    }
+    if (jam.jamPulangBuka > jam.jamPulangTutup) {
+      alert('Jam pulang tidak valid. Pastikan Buka ≤ Tutup.');
+      return;
+    }
+    setSavingJam(true);
+    try {
+      await saveSettings({ namaSekolah: namaSekolah.trim(), alamat: alamat.trim(), ...jam });
+      alert('Jam absensi berhasil disimpan.');
+    } catch (err) {
+      alert('Gagal menyimpan jam absensi: ' + (err.message || 'Terjadi kesalahan'));
+    } finally {
+      setSavingJam(false);
     }
   };
 
@@ -118,7 +151,59 @@ const SettingsScreen = () => {
         </form>
       </div>
 
-      {/* Logo Sekolah */}
+      {/* Jam Absensi */}
+      <div className="card" style={{ padding: '1.5rem', border: '1px solid var(--primary)' }}>
+        <h2 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Clock size={20} style={{ color: 'var(--primary)' }} />
+          Jam Absensi QR
+        </h2>
+        <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+          Atur kapan siswa boleh absen masuk dan pulang. Scan di luar jam ini akan ditolak.
+        </p>
+        <form onSubmit={handleSaveJam} className="flex flex-col gap-4">
+          <div>
+            <p style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>Absen Masuk</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.8125rem' }}>Jam Buka</label>
+                <input type="time" className="input" value={jam.jamMasukBuka} onChange={(e) => setJam({ ...jam, jamMasukBuka: e.target.value })} required />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.8125rem' }}>Batas Tepat Waktu</label>
+                <input type="time" className="input" value={jam.jamMasukBatas} onChange={(e) => setJam({ ...jam, jamMasukBatas: e.target.value })} required />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.8125rem' }}>Jam Tutup</label>
+                <input type="time" className="input" value={jam.jamMasukTutup} onChange={(e) => setJam({ ...jam, jamMasukTutup: e.target.value })} required />
+              </div>
+            </div>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+              Scan antara Buka–Batas = <strong>Hadir</strong>; setelah Batas sampai Tutup = <strong>Terlambat</strong>.
+            </p>
+          </div>
+
+          <div>
+            <p style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>Absen Pulang</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.8125rem' }}>Jam Buka</label>
+                <input type="time" className="input" value={jam.jamPulangBuka} onChange={(e) => setJam({ ...jam, jamPulangBuka: e.target.value })} required />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.8125rem' }}>Jam Tutup</label>
+                <input type="time" className="input" value={jam.jamPulangTutup} onChange={(e) => setJam({ ...jam, jamPulangTutup: e.target.value })} required />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <button type="submit" className="btn btn-primary" disabled={savingJam}>
+              {savingJam ? <Loader size={16} className="animate-spin" /> : <Save size={16} />}
+              {savingJam ? 'Menyimpan...' : 'Simpan Jam Absensi'}
+            </button>
+          </div>
+        </form>
+      </div>
       <div className="card" style={{ padding: '1.5rem' }}>
         <h2 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <ImageIcon size={20} style={{ color: 'var(--primary)' }} />

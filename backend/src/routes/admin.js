@@ -456,18 +456,31 @@ router.get('/settings', async (req, res) => {
 
 router.put('/settings', async (req, res) => {
   try {
-    const { namaSekolah, alamat } = req.body;
+    const {
+      namaSekolah, alamat,
+      jamMasukBuka, jamMasukBatas, jamMasukTutup, jamPulangBuka, jamPulangTutup
+    } = req.body;
+    const jam = {};
+    if (jamMasukBuka !== undefined) jam.jamMasukBuka = jamMasukBuka;
+    if (jamMasukBatas !== undefined) jam.jamMasukBatas = jamMasukBatas;
+    if (jamMasukTutup !== undefined) jam.jamMasukTutup = jamMasukTutup;
+    if (jamPulangBuka !== undefined) jam.jamPulangBuka = jamPulangBuka;
+    if (jamPulangTutup !== undefined) jam.jamPulangTutup = jamPulangTutup;
+
     let settings = await prisma.schoolSettings.findFirst();
     if (!settings) {
-      settings = await prisma.schoolSettings.create({ data: { namaSekolah, alamat } });
+      settings = await prisma.schoolSettings.create({
+        data: { namaSekolah, alamat, ...jam }
+      });
     } else {
       settings = await prisma.schoolSettings.update({
         where: { id: settings.id },
-        data: { namaSekolah, alamat }
+        data: { namaSekolah, alamat, ...jam }
       });
     }
     res.json(settings);
   } catch (err) {
+    console.error(err);
     res.status(400).json({ error: 'Gagal menyimpan pengaturan sekolah.' });
   }
 });

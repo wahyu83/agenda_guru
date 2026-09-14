@@ -3,9 +3,6 @@ const router = express.Router();
 const prisma = require('../db');
 const crypto = require('crypto');
 
-// Batas jam masuk; scan setelah jam ini dianggap terlambat
-const JAM_MASUK_BATAS = process.env.JAM_MASUK_BATAS || '07:00';
-
 // Helper: bentuk UTC date-only dari YYYY-MM-DD / Date (hindari geser timezone)
 const toUTCDate = (dateInput) => {
   if (typeof dateInput === 'string' && dateInput.match(/^\d{4}-\d{2}-\d{2}$/)) {
@@ -100,6 +97,43 @@ router.get('/sesi/cek', async (req, res) => {
   }
 });
 
+// Ambil jam absensi dari pengaturan sekolah (dengan nilai default)
+const getJamAbsensi = async () => {
+  const s = await prisma.schoolSettings.findFirst();
+  return {
+    masukBuka: s?.jamMasukBuka || '06:30',
+    masukBatas: s?.jamMasukBatas || '07:00',
+    masukTutup: s?.jamMasukTutup || '09:00',
+    pulangBuka: s?.jamPulangBuka || '13:00',
+    pulangTutup: s?.jamPulangTutup || '17:00'
+  };
+};
+
+const toMinutes = (hhmm) => {
+  const [h, m] = String(hhmm || '00:00').split(':').map(Number);
+  return (h || 0) * 60 + (m || 0);
+};
+
+// Tentukan mode absensi saat ini: 'masuk' | 'pulang' | null
+const modeAbsensi = (jam, nowMinutes) => {
+  if (nowMinutes >= toMinutes(jam.masukBuka) && nowMinutes <= toMinutes(jam.masukTutup)) return 'masuk';
+  if (nowMinutes >= toMinutes(jam.pulangBuka) && nowMinutes <= toMinutes(jam.pulangTutup)) return 'pulang';
+  return null;
+};
+
+// GET /status — jam absensi & mode yang sedang aktif (untuk halaman scan)
+router.get('/status', async (req, res) => {
+  try {
+    const jam = await getJamAbsensi();
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    res.json({ ...jam, mode: modeAbsensi(jam, nowMin) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal memuat status absensi.' });
+  }
+});
+
 // POST /scan — siswa scan kartu QR (mandiri), wajib sesi scan yang valid
 router.post('/scan', async (req, res) => {
   try {
@@ -118,37 +152,47 @@ router.post('/scan', async (req, res) => {
     });
     if (!siswa) return res.status(404).json({ error: 'Kartu tidak dikenali.' });
 
-    const tanggal = toUTCDate(todayLocalStr());
+    const jam = await getJamAbsensi();
     const now = new Date();
-    const [batasH, batasM] = JAM_MASUK_BATAS.split(':').map(Number);
-    const nowMinutes = now.getHours() * 60 + now.getMinutes();
-    const status = nowMinutes > batasH * 60 + batasM ? 'terlambat' : 'hadir';
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    const mode = modeAbsensi(jam, nowMin);
 
+    if (!mode) {
+      return res.status(400).json({
+        error: `Di luar jam absensi. Absen masuk ${jam.masukBuka}–${jam.masukTutup}, absen pulang ${jam.pulangBuka}–${jam.pulangTutup}.`
+      });
+    }
+
+    const tanggal = toUTCDate(todayLocalStr());
     const existing = await prisma.absensiHarian.findUnique({
       where: { siswaId_tanggal: { siswaId: siswa.id, tanggal } }
     });
 
-    if (existing) {
-      return res.json({
-        already: true,
-        siswa: { id: siswa.id, nama: siswa.nama, nis: siswa.nis },
-        kelas: kelasSiswa(siswa),
-        status: existing.status,
-        jamMasuk: existing.jamMasuk
+    const base = { siswa: { id: siswa.id, nama: siswa.nama, nis: siswa.nis }, kelas: kelasSiswa(siswa), mode };
+
+    if (mode === 'masuk') {
+      if (existing) {
+        return res.json({ ...base, already: true, status: existing.status, jamMasuk: existing.jamMasuk });
+      }
+      const status = nowMin > toMinutes(jam.masukBatas) ? 'terlambat' : 'hadir';
+      const created = await prisma.absensiHarian.create({
+        data: { siswaId: siswa.id, tanggal, jamMasuk: now, status }
       });
+      return res.json({ ...base, already: false, status: created.status, jamMasuk: created.jamMasuk });
     }
 
-    const created = await prisma.absensiHarian.create({
-      data: { siswaId: siswa.id, tanggal, jamMasuk: now, status }
+    // mode pulang
+    if (!existing) {
+      return res.status(400).json({ error: 'Belum melakukan absen masuk hari ini.' });
+    }
+    if (existing.jamPulang) {
+      return res.json({ ...base, already: true, status: existing.status, jamMasuk: existing.jamMasuk, jamPulang: existing.jamPulang });
+    }
+    const updated = await prisma.absensiHarian.update({
+      where: { id: existing.id },
+      data: { jamPulang: now }
     });
-
-    res.json({
-      already: false,
-      siswa: { id: siswa.id, nama: siswa.nama, nis: siswa.nis },
-      kelas: kelasSiswa(siswa),
-      status: created.status,
-      jamMasuk: created.jamMasuk
-    });
+    return res.json({ ...base, already: false, status: updated.status, jamMasuk: updated.jamMasuk, jamPulang: updated.jamPulang });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Gagal mencatat absensi.' });
@@ -176,6 +220,7 @@ router.get('/', async (req, res) => {
       kelas: kelasSiswa(a.siswa),
       status: a.status,
       jamMasuk: a.jamMasuk,
+      jamPulang: a.jamPulang,
       keterangan: a.keterangan
     }));
     res.json(formatted);
@@ -238,6 +283,7 @@ router.get('/laporan', async (req, res) => {
       kelas: kelasSiswa(a.siswa),
       status: a.status === 'terlambat' ? 'Terlambat' : 'Hadir',
       jamMasuk: fmtJam(a.jamMasuk),
+      jamPulang: a.jamPulang ? fmtJam(a.jamPulang) : '-',
       keterangan: a.keterangan || '-'
     }));
 

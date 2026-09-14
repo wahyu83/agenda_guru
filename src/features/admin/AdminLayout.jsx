@@ -37,6 +37,7 @@ const AdminLayout = () => {
     { name: 'Data Kelas', path: '/admin/kelas', icon: <LayoutDashboard size={20} /> },
     { name: 'Data Siswa', path: '/admin/siswa', icon: <GraduationCap size={20} /> },
     { name: 'Absensi QR', path: '/admin/absensi-qr', icon: <QrCode size={20} /> },
+    { name: 'Laporan Absensi', path: '/admin/laporan-absensi', icon: <FileText size={20} /> },
     { name: 'Laporan', path: '/admin/laporan', icon: <FileText size={20} /> },
     { name: 'Jam Pelajaran', path: '/admin/jam-pelajaran', icon: <Clock size={20} /> },
     { name: 'Pengaturan Sekolah', path: '/admin/settings', icon: <Settings size={20} /> },

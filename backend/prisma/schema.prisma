@@ -197,6 +197,12 @@ model SchoolSettings {
   namaSekolah String  @default("SMK NEGERI 1 ARAHAN")
   alamat      String  @default("Jl. Raya Arahan, Kabupaten Indramayu, Jawa Barat")
   logoPath    String?
+  // Jam absensi QR
+  jamMasukBuka   String @default("06:30")
+  jamMasukBatas  String @default("07:00")
+  jamMasukTutup  String @default("09:00")
+  jamPulangBuka  String @default("13:00")
+  jamPulangTutup String @default("17:00")
   updatedAt   DateTime @updatedAt
 }
 
@@ -260,6 +266,7 @@ model AbsensiHarian {
   siswaId    Int
   tanggal    DateTime @db.Date
   jamMasuk   DateTime @default(now())
+  jamPulang  DateTime?
   status     String   @default("hadir") // "hadir" | "terlambat"
   keterangan String?
   createdAt  DateTime @default(now())
