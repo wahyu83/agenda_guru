@@ -277,6 +277,7 @@ router.get('/laporan', async (req, res) => {
 
     const formatted = data.map(a => ({
       no: null,
+      siswaId: a.siswaId,
       tanggal: fmtTanggal(a.tanggal),
       nama: a.siswa?.nama || '-',
       nis: a.siswa?.nis || '-',
