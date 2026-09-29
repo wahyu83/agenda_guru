@@ -4,6 +4,7 @@ import { FileText, FileSpreadsheet, Users, BookOpen, GraduationCap, Filter, X } 
 import Papa from 'papaparse';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import LaporanAbsensi from '../../absensi/pages/LaporanAbsensi';
 
 const MONTHS = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -600,6 +601,16 @@ const WaliKelasScreen = () => {
                 <FileSpreadsheet size={16} /> Export CSV
               </button>
             </div>
+          </div>
+
+          {/* Absensi QR (Kehadiran Harian) */}
+          <div className="card" style={{ padding: '1.25rem', border: '1px solid var(--border-color)' }}>
+            <LaporanAbsensi
+              fixedKelasId={selectedKelasId ? String(selectedKelasId) : ''}
+              judul="Absensi QR (Kehadiran Harian)"
+              deskripsi={`Rekap absensi QR siswa kelas ${selectedKelas?.nama || '-'} — export PDF & CSV.`}
+              periodeDefault="bulan"
+            />
           </div>
         </div>
       )}

@@ -13,17 +13,29 @@ const todayStr = () => {
   return `${y}-${m}-${d}`;
 };
 
-const LaporanAbsensi = () => {
+const awalBulanStr = () => {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}-01`;
+};
+
+const LaporanAbsensi = ({ fixedKelasId = '', judul = 'Laporan Absensi', deskripsi = 'Export rekap kehadiran siswa (PDF & CSV).', periodeDefault = 'hari' }) => {
   const { user, settings, kelas, absensiHarianLaporan, fetchAbsensiHarianLaporan, fetchMasterData } = useAppStore();
-  const [dariTanggal, setDariTanggal] = useState(todayStr());
+  const [dariTanggal, setDariTanggal] = useState(periodeDefault === 'bulan' ? awalBulanStr() : todayStr());
   const [sampaiTanggal, setSampaiTanggal] = useState(todayStr());
-  const [selectedKelas, setSelectedKelas] = useState('');
+  const [selectedKelas, setSelectedKelas] = useState(fixedKelasId);
   const [selectedStatus, setSelectedStatus] = useState('');
   const [mode, setMode] = useState('siswa'); // 'siswa' (rekap per siswa) | 'detail' (per hari)
 
   useEffect(() => {
     if (kelas.length === 0) fetchMasterData();
   }, [fetchMasterData, kelas.length]);
+
+  // Ikuti kelas yang dipilih di halaman induk (untuk wali kelas)
+  useEffect(() => {
+    if (fixedKelasId) setSelectedKelas(fixedKelasId);
+  }, [fixedKelasId]);
 
   useEffect(() => {
     fetchAbsensiHarianLaporan({
@@ -181,8 +193,8 @@ const LaporanAbsensi = () => {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>Laporan Absensi</h1>
-        <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Export rekap kehadiran siswa (PDF &amp; CSV).</p>
+        <h1 style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>{judul}</h1>
+        <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{deskripsi}</p>
       </div>
 
       {/* Filter */}
@@ -195,17 +207,23 @@ const LaporanAbsensi = () => {
           <input type="date" className="input" style={{ width: 'auto', fontSize: '0.8125rem' }} value={sampaiTanggal} onChange={(e) => setSampaiTanggal(e.target.value)} />
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <select className="input" style={{ width: 'auto', minWidth: '140px', fontSize: '0.8125rem' }} value={selectedKelas} onChange={(e) => setSelectedKelas(e.target.value)}>
-            <option value="">Semua Kelas</option>
-            {kelas.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
-          </select>
+          {fixedKelasId ? (
+            <span className="input" style={{ width: 'auto', minWidth: '140px', fontSize: '0.8125rem', display: 'inline-flex', alignItems: 'center', backgroundColor: 'var(--surface-hover)' }}>
+              Kelas: {kelas.find(k => String(k.id) === String(fixedKelasId))?.nama || '-'}
+            </span>
+          ) : (
+            <select className="input" style={{ width: 'auto', minWidth: '140px', fontSize: '0.8125rem' }} value={selectedKelas} onChange={(e) => setSelectedKelas(e.target.value)}>
+              <option value="">Semua Kelas</option>
+              {kelas.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
+            </select>
+          )}
           <select className="input" style={{ width: 'auto', minWidth: '130px', fontSize: '0.8125rem' }} value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>
             <option value="">Semua Status</option>
             <option value="hadir">Hadir</option>
             <option value="terlambat">Terlambat</option>
           </select>
-          {(dariTanggal !== todayStr() || sampaiTanggal !== todayStr() || selectedKelas || selectedStatus) && (
-            <button onClick={() => { setDariTanggal(todayStr()); setSampaiTanggal(todayStr()); setSelectedKelas(''); setSelectedStatus(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8125rem' }}>
+          {(dariTanggal !== (periodeDefault === 'bulan' ? awalBulanStr() : todayStr()) || sampaiTanggal !== todayStr() || (!fixedKelasId && selectedKelas) || selectedStatus) && (
+            <button onClick={() => { setDariTanggal(periodeDefault === 'bulan' ? awalBulanStr() : todayStr()); setSampaiTanggal(todayStr()); if (!fixedKelasId) setSelectedKelas(''); setSelectedStatus(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8125rem' }}>
               <X size={14} /> Reset
             </button>
           )}
