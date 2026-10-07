@@ -29,7 +29,7 @@ const groupByBatch = (items) => {
   );
 };
 
-const downloadReceiptImage = (group, user, onSuccess, onError) => {
+const downloadReceiptImage = (group, user, settings, onSuccess, onError) => {
   const W = 640;
   const PAD = 40;
   const tmpCtx = document.createElement('canvas').getContext('2d');
@@ -317,12 +317,18 @@ const IzinSiswaScreen = () => {
   };
 
   const handleDownloadImage = (group) => {
-    downloadReceiptImage(
-      group,
-      user,
-      () => setToast({ type: 'success', message: 'Gambar berhasil diunduh' }),
-      (msg) => setToast({ type: 'error', message: msg })
-    );
+    try {
+      downloadReceiptImage(
+        group,
+        user,
+        settings,
+        () => setToast({ type: 'success', message: 'Gambar berhasil diunduh' }),
+        (msg) => setToast({ type: 'error', message: msg })
+      );
+    } catch (err) {
+      console.error('Download gambar error:', err);
+      setToast({ type: 'error', message: 'Gagal mengunduh gambar' });
+    }
   };
 
   const handleDirectPrint = (group) => {
