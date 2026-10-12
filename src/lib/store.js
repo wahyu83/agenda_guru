@@ -13,6 +13,7 @@ export const useAppStore = create((set, get) => ({
   jadwalGuru: [], // Jadwal mengajar dengan status agenda hari ini
   siswaKelasAktif: [], // Daftar siswa untuk kelas yang dipilih guru
   riwayatGuru: { agenda: [], absensi: [], nilai: [] },
+  bobotNilai: [],
   laporanAgenda: [],
   laporanAbsensi: [],
   laporanPiket: [],
@@ -592,6 +593,30 @@ export const useAppStore = create((set, get) => ({
     });
     if (!res.ok) throw new Error('Gagal batch update nilai');
     return await res.json();
+  },
+
+  fetchBobotNilai: async (guruId) => {
+    try {
+      const res = await fetch(`${API_BASE}/guru/bobot/${guruId}`);
+      const data = await res.json();
+      set({ bobotNilai: data });
+    } catch (err) {
+      console.error('Gagal fetch bobot nilai:', err);
+    }
+  },
+
+  saveBobotNilai: async (payload) => {
+    const res = await fetch(`${API_BASE}/guru/bobot`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Gagal menyimpan bobot nilai');
+    const saved = await res.json();
+    const list = get().bobotNilai || [];
+    const exists = list.some(b => b.mapelId === saved.mapelId);
+    set({ bobotNilai: exists ? list.map(b => b.mapelId === saved.mapelId ? saved : b) : [...list, saved] });
+    return saved;
   },
 
   fetchNilaiExport: async (kelasId, mapelId = null) => {

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../../lib/store';
+import { JENIS_OPTIONS, JENIS_ABBR, JENIS_COLOR, jenisLabel, bobotForMapel, hitungNilaiAkhir } from '../../../lib/nilai';
 import { Book, CheckCircle, Clock, Download, FileText, FileSpreadsheet, Edit, Trash2, X, BarChart3, Users } from 'lucide-react';
 import Papa from 'papaparse';
 import { jsPDF } from 'jspdf';
@@ -8,7 +9,7 @@ import autoTable from 'jspdf-autotable';
 
 const RiwayatScreen = () => {
   const navigate = useNavigate();
-  const { user, riwayatGuru, settings, fetchRiwayatGuru, updateAgenda, deleteAgenda, deleteAbsensi, updateNilai, deleteNilai, fetchRiwayatNilai } = useAppStore();
+  const { user, riwayatGuru, settings, bobotNilai, fetchRiwayatGuru, updateAgenda, deleteAgenda, deleteAbsensi, updateNilai, deleteNilai, fetchRiwayatNilai, fetchBobotNilai } = useAppStore();
   const [activeTab, setActiveTab] = useState('agenda');
   
   // Modal Edit Agenda State
@@ -19,8 +20,9 @@ const RiwayatScreen = () => {
     if (user?.id) {
       fetchRiwayatGuru(user.id);
       fetchRiwayatNilai(user.id);
+      fetchBobotNilai(user.id);
     }
-  }, [user, fetchRiwayatGuru, fetchRiwayatNilai]);
+  }, [user, fetchRiwayatGuru, fetchRiwayatNilai, fetchBobotNilai]);
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -61,6 +63,7 @@ const RiwayatScreen = () => {
   }, [riwayatGuru.absensi]);
 
   const [selectedKelasRecap, setSelectedKelasRecap] = useState(null);
+  const [selectedRekap, setSelectedRekap] = useState(null);
 
   // --- CSV EXPORT LOGIC ---
   const handleExportCSV = (filename, data) => {
@@ -243,20 +246,19 @@ const RiwayatScreen = () => {
     }
   };
 
-  // --- NILAI EXPORT (Rekap Matrix) ---
-  const exportNilai = (type) => {
+  // --- NILAI REKAP (Matrix + Nilai Akhir berbobot) ---
+  const buildRekapNilai = () => {
     const nilai = riwayatGuru.nilai || [];
-    if (nilai.length === 0) {
-      alert('Tidak ada data nilai untuk diekspor.');
-      return;
-    }
-
-    // Group by kelas + mapel (pengampu)
     const groups = {};
     nilai.forEach(n => {
-      const key = `${n.pengampu?.kelasId || n.pengampu?.kelas?.id}-${n.pengampu?.mapelId || n.pengampu?.mapel?.id}`;
+      const kelasId = n.pengampu?.kelas?.id ?? n.pengampu?.kelasId;
+      const mapelId = n.pengampu?.mapel?.id ?? n.pengampu?.mapelId;
+      const key = `${kelasId}-${mapelId}`;
       if (!groups[key]) {
         groups[key] = {
+          key,
+          kelasId,
+          mapelId,
           kelas: n.pengampu?.kelas?.nama || '-',
           mapel: n.pengampu?.mapel?.nama || '-',
           siswaMap: new Map(),
@@ -266,32 +268,53 @@ const RiwayatScreen = () => {
       }
       const g = groups[key];
       if (!g.siswaMap.has(n.siswaId)) {
-        g.siswaMap.set(n.siswaId, { siswa: n.siswa, nilaiMap: new Map() });
+        g.siswaMap.set(n.siswaId, { siswa: n.siswa, nilaiMap: new Map(), nilaiByJenis: {} });
       }
-      const descKey = `${n.jenis}|${n.deskripsi || '-'}|${formatDate(n.tanggal)}`;
+      const s = g.siswaMap.get(n.siswaId);
+      const j = n.jenis || 'tugas';
+      if (!s.nilaiByJenis[j]) s.nilaiByJenis[j] = [];
+      s.nilaiByJenis[j].push(n.nilai);
+      const descKey = `${j}|${n.deskripsi || '-'}|${formatDate(n.tanggal)}`;
       if (!g.deskripsiSet.has(descKey)) {
         g.deskripsiSet.add(descKey);
-        g.deskripsiList.push({ key: descKey, jenis: n.jenis, deskripsi: n.deskripsi || '-', tanggal: formatDate(n.tanggal) });
+        g.deskripsiList.push({ key: descKey, jenis: j, deskripsi: n.deskripsi || '-', tanggal: formatDate(n.tanggal) });
       }
-      g.siswaMap.get(n.siswaId).nilaiMap.set(descKey, n.nilai);
+      s.nilaiMap.set(descKey, n.nilai);
     });
 
-    const matrices = Object.values(groups).map(g => {
+    return Object.values(groups).map(g => {
+      const bobot = bobotForMapel(bobotNilai, g.mapelId);
       const students = Array.from(g.siswaMap.values())
         .sort((a, b) => String(a.siswa.nis).localeCompare(String(b.siswa.nis), undefined, { numeric: true }));
-      const matrixData = students.map((s, idx) => {
+      const rows = students.map((s, idx) => {
+        const avg = {};
+        JENIS_OPTIONS.forEach(o => {
+          const arr = s.nilaiByJenis[o.value] || [];
+          avg[o.value] = arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+        });
+        const akhir = hitungNilaiAkhir(avg, bobot);
         const row = { No: idx + 1, Nama: s.siswa.nama, NIS: s.siswa.nis };
-        let total = 0, count = 0;
         g.deskripsiList.forEach(d => {
           const val = s.nilaiMap.get(d.key);
           row[d.key] = val !== undefined ? val : '-';
-          if (val !== undefined) { total += val; count++; }
         });
-        row['Rata'] = count > 0 ? (total / count).toFixed(1) : '-';
+        JENIS_OPTIONS.forEach(o => { row['avg_' + o.value] = avg[o.value] !== null ? avg[o.value].toFixed(1) : '-'; });
+        row['NilaiAkhir'] = akhir !== null ? akhir.toFixed(1) : '-';
         return row;
       });
-      return { kelas: g.kelas, mapel: g.mapel, deskripsiList: g.deskripsiList, matrixData };
+      return { ...g, bobot, rows };
     });
+  };
+
+  const bobotLabel = (bobot) => JENIS_OPTIONS.map(o => `${o.label} ${bobot[o.value]}%`).join(', ');
+
+  // --- NILAI EXPORT (Rekap Matrix) ---
+  const exportNilai = (type) => {
+    const matrices = buildRekapNilai();
+    if (matrices.length === 0) {
+      alert('Tidak ada data nilai untuk diekspor.');
+      return;
+    }
 
     if (type === 'csv') {
       let csvRows = [];
@@ -301,13 +324,18 @@ const RiwayatScreen = () => {
         csvRows.push([]);
         csvRows.push(['Rekap Nilai Siswa']);
         csvRows.push([`Kelas: ${m.kelas}    Mapel: ${m.mapel}    Guru: ${user?.nama || '-'}`]);
+        csvRows.push([`Bobot: ${bobotLabel(m.bobot)}`]);
         csvRows.push([]);
-        const headerRow = ['No', 'Nama', 'NIS', ...m.deskripsiList.map(d => `${d.jenis === 'ulangan' ? 'UH' : 'TG'}: ${d.deskripsi}`), 'Rata-rata'];
+        const headerRow = ['No', 'Nama', 'NIS',
+          ...m.deskripsiList.map(d => `${JENIS_ABBR[d.jenis] || d.jenis}: ${d.deskripsi}`),
+          ...JENIS_OPTIONS.map(o => `${o.abbr} (${m.bobot[o.value]}%)`),
+          'Nilai Akhir'];
         csvRows.push(headerRow);
-        m.matrixData.forEach(row => {
+        m.rows.forEach(row => {
           const dataRow = [row.No, row.Nama, row.NIS];
           m.deskripsiList.forEach(d => { dataRow.push(row[d.key]); });
-          dataRow.push(row['Rata']);
+          JENIS_OPTIONS.forEach(o => { dataRow.push(row['avg_' + o.value]); });
+          dataRow.push(row['NilaiAkhir']);
           csvRows.push(dataRow);
         });
         csvRows.push([]);
@@ -323,18 +351,20 @@ const RiwayatScreen = () => {
           doc.text('Rekap Nilai Siswa', 14, 15);
           doc.setFontSize(10);
           doc.text(`Kelas: ${m.kelas}    Mapel: ${m.mapel}    Guru: ${user?.nama || '-'}`, 14, 22);
+          doc.text(`Bobot: ${bobotLabel(m.bobot)}`, 14, 27);
           const columns = [
             { header: 'No', key: 'No' },
             { header: 'Nama', key: 'Nama' },
             { header: 'NIS', key: 'NIS' },
-            ...m.deskripsiList.map(d => ({ header: d.deskripsi.length > 8 ? d.deskripsi.substring(0, 8) + '...' : d.deskripsi, key: d.key })),
-            { header: 'Rata', key: 'Rata' }
+            ...m.deskripsiList.map(d => ({ header: `${JENIS_ABBR[d.jenis] || d.jenis}: ${d.deskripsi.length > 8 ? d.deskripsi.substring(0, 8) + '...' : d.deskripsi}`, key: d.key })),
+            ...JENIS_OPTIONS.map(o => ({ header: `${o.abbr}\n(${m.bobot[o.value]}%)`, key: 'avg_' + o.value })),
+            { header: 'Nilai\nAkhir', key: 'NilaiAkhir' }
           ];
           autoTable(doc, {
-            startY: 28,
+            startY: 32,
             theme: 'grid',
             head: [columns.map(c => c.header)],
-            body: m.matrixData.map(item => columns.map(c => item[c.key] !== undefined ? item[c.key] : '')),
+            body: m.rows.map(item => columns.map(c => item[c.key] !== undefined ? item[c.key] : '')),
             styles: { fontSize: 7, cellPadding: 1, lineColor: [0, 0, 0], lineWidth: 0.1 },
             headStyles: { fillColor: [43, 62, 80], halign: 'center' },
             bodyStyles: { halign: 'center' },
@@ -393,7 +423,7 @@ const RiwayatScreen = () => {
           mapel: n.pengampu?.mapel?.nama,
           tanggal: n.tanggal,
           jenis: n.jenis,
-          jenisLabel: n.jenis === 'ulangan' ? 'Ulangan Harian' : 'Tugas',
+          jenisLabel: jenisLabel(n.jenis),
           deskripsi: n.deskripsi || '',
           items: [],
           siswaCount: new Set()
@@ -585,7 +615,49 @@ const RiwayatScreen = () => {
               Belum ada riwayat nilai.
             </div>
           ) : (
-            getNilaiSessions().map((session, idx) => (
+            <>
+              {(() => {
+                const matrices = buildRekapNilai();
+                if (matrices.length === 0) return null;
+                const sel = matrices.find(m => m.key === selectedRekap) || matrices[0];
+                const th = { padding: '0.5rem', color: 'var(--text-muted)', fontWeight: '600', textAlign: 'center', whiteSpace: 'nowrap' };
+                const td = { padding: '0.5rem', textAlign: 'center' };
+                return (
+                  <div className="card" style={{ padding: '0.75rem', marginBottom: '0.75rem' }}>
+                    <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Rekap Nilai Akhir</h3>
+                    <select className="input" value={sel.key} onChange={(e) => setSelectedRekap(e.target.value)} style={{ marginBottom: '0.5rem' }}>
+                      {matrices.map(m => <option key={m.key} value={m.key}>{m.kelas} - {m.mapel}</option>)}
+                    </select>
+                    <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Bobot: {bobotLabel(sel.bobot)}</p>
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--surface-hover)' }}>
+                            <th style={th}>No</th>
+                            <th style={{ ...th, textAlign: 'left' }}>Nama</th>
+                            {JENIS_OPTIONS.map(o => <th key={o.value} style={th}>{o.abbr}<br />({sel.bobot[o.value]}%)</th>)}
+                            <th style={{ ...th, color: 'var(--primary)' }}>Nilai Akhir</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sel.rows.map(r => (
+                            <tr key={r.NIS} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                              <td style={td}>{r.No}</td>
+                              <td style={{ ...td, textAlign: 'left', fontWeight: '500' }}>
+                                {r.Nama}
+                                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{r.NIS}</div>
+                              </td>
+                              {JENIS_OPTIONS.map(o => <td key={o.value} style={td}>{r['avg_' + o.value]}</td>)}
+                              <td style={{ ...td, fontWeight: '700', color: 'var(--primary)' }}>{r.NilaiAkhir}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })()}
+              {getNilaiSessions().map((session, idx) => (
               <div key={idx} className="card" style={{ padding: '1rem', cursor: 'pointer' }}
                 onClick={() => navigate(`/guru/nilai-edit?pengampuId=${session.pengampuId}&tanggal=${session.tanggal}&jenis=${session.jenis}&deskripsi=${encodeURIComponent(session.deskripsi)}&kelasId=${session.kelasId}`)}>
                 <div className="flex justify-between items-start">
@@ -597,7 +669,7 @@ const RiwayatScreen = () => {
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                         <Clock size={12} /> {formatDate(session.tanggal)}
                       </span>
-                      <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.5rem', borderRadius: 'var(--radius-full)', backgroundColor: session.jenis === 'ulangan' ? 'var(--warning)20' : 'var(--info)20', color: session.jenis === 'ulangan' ? 'var(--warning)' : 'var(--info)', fontWeight: '600' }}>
+                      <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.5rem', borderRadius: 'var(--radius-full)', backgroundColor: `${JENIS_COLOR[session.jenis] || 'var(--info)'}20`, color: JENIS_COLOR[session.jenis] || 'var(--info)', fontWeight: '600' }}>
                         {session.jenisLabel}
                       </span>
                       {session.deskripsi && (
@@ -616,7 +688,8 @@ const RiwayatScreen = () => {
                   </div>
                 </div>
               </div>
-            ))
+              ))}
+            </>
           )
         )}
       </div>

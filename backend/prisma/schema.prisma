@@ -23,6 +23,7 @@ model User {
   bkKasus   BkKasus[]          @relation("BkKonselor")
   bkKonseling BkKonseling[]    @relation("BkKonselingKonselor")
   bkBimbingan BkBimbingan[]    @relation("BkBimbinganKonselor")
+  bobotNilai  BobotNilai[]
 }
 
 model TahunPelajaran {
@@ -34,9 +35,10 @@ model TahunPelajaran {
 }
 
 model MataPelajaran {
-  id       Int        @id @default(autoincrement())
-  nama     String
-  pengampu Pengampu[]
+  id         Int          @id @default(autoincrement())
+  nama       String
+  pengampu   Pengampu[]
+  bobotNilai BobotNilai[]
 }
 
 model Kelas {
@@ -140,6 +142,21 @@ model Nilai {
   pengampu      Pengampu @relation(fields: [pengampuId], references: [id], onDelete: Cascade)
   enrollment    Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
   siswa         Siswa    @relation(fields: [siswaId], references: [id], onDelete: Cascade)
+}
+
+model BobotNilai {
+  id            Int           @id @default(autoincrement())
+  guruId        Int
+  mapelId       Int
+  bobotTugas    Int           @default(30)
+  bobotUlangan  Int           @default(30)
+  bobotMid      Int           @default(20)
+  bobotSemester Int           @default(20)
+  updatedAt     DateTime      @updatedAt
+  guru          User          @relation(fields: [guruId], references: [id], onDelete: Cascade)
+  mapel         MataPelajaran @relation(fields: [mapelId], references: [id], onDelete: Cascade)
+
+  @@unique([guruId, mapelId])
 }
 
 model RencanaPertemuan {

@@ -210,22 +210,23 @@ Halaman **Absensi** menampilkan daftar siswa di kelas yang dipilih. Setiap siswa
 
 ## 7. Memasukkan Nilai Siswa
 
-Halaman **Nilai** digunakan untuk mencatat nilai **Tugas** atau **Ulangan Harian** siswa.
+Halaman **Nilai** digunakan untuk mencatat nilai **Tugas**, **Ulangan Harian**, **Mid**, atau **Semester** siswa.
 
 ### Form Input Nilai
 
 <table>
 <tr><th>Field</th><th>Keterangan</th></tr>
 <tr><td><b>Tanggal</b></td><td>Tanggal penilaian</td></tr>
-<tr><td><b>Jenis</b></td><td><b>Tugas</b> atau <b>Ulangan Harian</b></td></tr>
-<tr><td><b>Deskripsi</b></td><td>Judul tugas/ulangan (contoh: <i>"Bab 3 - Trigonometri"</i>)</td></tr>
+<tr><td><b>Jenis</b></td><td><b>Tugas</b>, <b>Ulangan Harian</b>, <b>Mid</b>, atau <b>Semester</b></td></tr>
+<tr><td><b>Deskripsi</b></td><td>Judul tugas/ulangan/mid/semester (contoh: <i>"Bab 3 - Trigonometri"</i>)</td></tr>
 <tr><td><b>Nilai</b></td><td>Skala <b>0 - 100</b> per siswa</td></tr>
+<tr><td><b>Bobot Penilaian</b></td><td>Persentase bobot tiap jenis untuk mapel ini (default Tugas 30%, Ulangan Harian 30%, Mid 20%, Semester 20%). Total sebaiknya 100%.</td></tr>
 </table>
 
 ### Langkah Pengisian:
 
 1. Pilih **Tanggal** penilaian.
-2. Pilih **Jenis** (Tugas / Ulangan Harian).
+2. Pilih **Jenis** (Tugas / Ulangan Harian / Mid / Semester).
 3. Isi **Deskripsi** untuk identifikasi.
 4. Masukkan nilai setiap siswa pada kolom input (0-100).
 5. Klik **Simpan Nilai**.
@@ -316,6 +317,7 @@ Halaman **Riwayat** menampilkan semua data yang pernah diisi dan mendukung fitur
 <table>
 <tr><th>Fitur</th><th>Deskripsi</th></tr>
 <tr><td><b>Lihat</b></td><td>Daftar nilai yang dikelompokkan berdasarkan tanggal & jenis</td></tr>
+<tr><td><b>Rekap Nilai Akhir</b></td><td>Rata-rata per jenis dan <b>Nilai Akhir</b> berbobot sesuai persentase tiap jenis. Jenis tanpa nilai dihitung 0. Ikut terunduh pada export PDF/CSV.</td></tr>
 <tr><td><b>Edit</b></td><td>Ubah nilai siswa</td></tr>
 <tr><td><b>Hapus</b></td><td>Menghapus sesi penilaian</td></tr>
 <tr><td><b>Export</b></td><td>Unduh sebagai PDF atau CSV</td></tr>

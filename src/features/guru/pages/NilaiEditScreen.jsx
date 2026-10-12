@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Search } from 'lucide-react';
 import { useAppStore } from '../../../lib/store';
+import { jenisLabel, JENIS_COLOR } from '../../../lib/nilai';
 
 const NilaiEditScreen = () => {
   const [searchParams] = useSearchParams();
@@ -109,7 +110,7 @@ const NilaiEditScreen = () => {
           <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
             {currentTugas ? `${currentTugas.kelas?.nama} - ${currentTugas.mapel?.nama}` : `Tugas ID: ${pengampuId}`}
             {' | '}{new Date(tanggal).toLocaleDateString('id-ID')}
-            {' | '}{jenis === 'ulangan' ? 'Ulangan Harian' : 'Tugas'}
+            {' | '}{jenisLabel(jenis)}
             {deskripsi ? ` - ${deskripsi}` : ''}
           </p>
         </div>
@@ -117,8 +118,8 @@ const NilaiEditScreen = () => {
 
       <div className="flex gap-2" style={{ padding: '0.5rem', backgroundColor: 'var(--surface-hover)', borderRadius: 'var(--radius-md)' }}>
         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Jenis:</span>
-        <span style={{ fontSize: '0.75rem', fontWeight: '600', color: jenis === 'ulangan' ? 'var(--warning)' : 'var(--info)' }}>
-          {jenis === 'ulangan' ? 'Ulangan Harian' : 'Tugas'}
+        <span style={{ fontSize: '0.75rem', fontWeight: '600', color: JENIS_COLOR[jenis] || 'var(--info)' }}>
+          {jenisLabel(jenis)}
         </span>
         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>|</span>
         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Tanggal:</span>

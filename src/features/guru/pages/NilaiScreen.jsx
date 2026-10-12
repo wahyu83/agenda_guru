@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Search } from 'lucide-react';
 import { useAppStore } from '../../../lib/store';
+import { JENIS_OPTIONS, bobotForMapel } from '../../../lib/nilai';
 
 const NilaiScreen = () => {
   const { tugasId } = useParams();
   const navigate = useNavigate();
-  const { tugasGuru, siswaKelasAktif, fetchSiswaKelas, saveNilai } = useAppStore();
+  const { user, tugasGuru, siswaKelasAktif, fetchSiswaKelas, saveNilai, bobotNilai, fetchBobotNilai, saveBobotNilai } = useAppStore();
 
   const currentTugas = tugasGuru.find(t => t.id === parseInt(tugasId));
 
@@ -20,12 +21,44 @@ const NilaiScreen = () => {
   const [tanggal, setTanggal] = useState(maxDate);
   const [jenis, setJenis] = useState('tugas');
   const [deskripsi, setDeskripsi] = useState('');
+  const [showBobot, setShowBobot] = useState(false);
+  const [bobotOverride, setBobotOverride] = useState(null);
+  const [savingBobot, setSavingBobot] = useState(false);
 
   useEffect(() => {
     if (currentTugas?.kelasId) {
       fetchSiswaKelas(currentTugas.kelasId);
     }
   }, [currentTugas, fetchSiswaKelas]);
+
+  useEffect(() => {
+    if (user?.id) fetchBobotNilai(user.id);
+  }, [user, fetchBobotNilai]);
+
+  const bobot = bobotOverride ?? bobotForMapel(bobotNilai, currentTugas?.mapel?.id);
+  const totalBobot = Object.values(bobot).reduce((a, b) => a + (parseInt(b) || 0), 0);
+
+  const handleSaveBobot = async () => {
+    if (!user?.id || !currentTugas?.mapel?.id) return;
+    setSavingBobot(true);
+    try {
+      await saveBobotNilai({
+        guruId: user.id,
+        mapelId: currentTugas.mapel.id,
+        bobotTugas: parseInt(bobot.tugas) || 0,
+        bobotUlangan: parseInt(bobot.ulangan) || 0,
+        bobotMid: parseInt(bobot.mid) || 0,
+        bobotSemester: parseInt(bobot.semester) || 0,
+      });
+      setBobotOverride(null);
+      alert('Bobot nilai berhasil disimpan!');
+    } catch (error) {
+      console.error(error);
+      alert('Gagal menyimpan bobot nilai.');
+    } finally {
+      setSavingBobot(false);
+    }
+  };
 
   useEffect(() => {
     if (siswaKelasAktif.length > 0) {
@@ -112,14 +145,47 @@ const NilaiScreen = () => {
           <div>
             <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.875rem', fontWeight: '500' }}>Jenis</label>
             <select className="input w-full" value={jenis} onChange={(e) => setJenis(e.target.value)}>
-              <option value="tugas">Tugas</option>
-              <option value="ulangan">Ulangan Harian</option>
+              {JENIS_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
             </select>
           </div>
         </div>
         <div>
-          <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.875rem', fontWeight: '500' }}>Deskripsi (Judul Tugas/Ulangan)</label>
+          <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.875rem', fontWeight: '500' }}>Deskripsi (Judul Tugas/Ulangan/Mid/Semester)</label>
           <input type="text" className="input w-full" placeholder="Contoh: Bab 3 - Trigonometri" value={deskripsi} onChange={(e) => setDeskripsi(e.target.value)} />
+        </div>
+
+        <div className="card" style={{ padding: '0.75rem' }}>
+          <button type="button" onClick={() => setShowBobot(!showBobot)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+            <span style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--primary)' }}>Bobot Penilaian (mapel ini)</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '600' }}>{showBobot ? 'Tutup' : 'Atur'}</span>
+          </button>
+          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+            Berlaku untuk semua kelas yang Anda ampu pada mapel ini. Total saat ini: <b style={{ color: totalBobot === 100 ? 'var(--secondary)' : 'var(--warning)' }}>{totalBobot}%</b>
+          </p>
+          {showBobot && (
+            <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {JENIS_OPTIONS.map((o) => (
+                <div key={o.value} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <label style={{ flex: 1, fontSize: '0.8rem' }}>{o.label}</label>
+                  <input
+                    type="number" min="0" max="100" className="input"
+                    value={bobot[o.value]}
+                    onChange={(e) => setBobotOverride({ ...bobot, [o.value]: e.target.value })}
+                    style={{ width: '80px', textAlign: 'center', padding: '0.4rem', fontSize: '0.8rem' }}
+                  />
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>%</span>
+                </div>
+              ))}
+              {totalBobot !== 100 && (
+                <p style={{ fontSize: '0.7rem', color: 'var(--warning)' }}>Catatan: total bobot sebaiknya 100%.</p>
+              )}
+              <button type="button" onClick={handleSaveBobot} disabled={savingBobot} className="btn btn-secondary" style={{ padding: '0.5rem', fontSize: '0.8rem' }}>
+                {savingBobot ? 'Menyimpan...' : 'Simpan Bobot'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

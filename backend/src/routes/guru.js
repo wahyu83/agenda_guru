@@ -464,6 +464,41 @@ router.delete('/nilai/:id', async (req, res) => {
   }
 });
 
+// --- BOBOT NILAI (per guru/mapel) ---
+router.get('/bobot/:guruId', async (req, res) => {
+  try {
+    const bobot = await prisma.bobotNilai.findMany({
+      where: { guruId: parseInt(req.params.guruId) }
+    });
+    res.json(bobot);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal mengambil bobot nilai' });
+  }
+});
+
+router.put('/bobot', async (req, res) => {
+  try {
+    const { guruId, mapelId, bobotTugas, bobotUlangan, bobotMid, bobotSemester } = req.body;
+    const toInt = (v, d) => (v === undefined || v === null || v === '' ? d : parseInt(v));
+    const data = {
+      bobotTugas: toInt(bobotTugas, 30),
+      bobotUlangan: toInt(bobotUlangan, 30),
+      bobotMid: toInt(bobotMid, 20),
+      bobotSemester: toInt(bobotSemester, 20)
+    };
+    const saved = await prisma.bobotNilai.upsert({
+      where: { guruId_mapelId: { guruId: parseInt(guruId), mapelId: parseInt(mapelId) } },
+      update: data,
+      create: { guruId: parseInt(guruId), mapelId: parseInt(mapelId), ...data }
+    });
+    res.json(saved);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal menyimpan bobot nilai' });
+  }
+});
+
 // Must be last to avoid matching /nilai-session, /nilai-riwayat, etc.
 router.get('/nilai/:kelasId', async (req, res) => {
   try {
