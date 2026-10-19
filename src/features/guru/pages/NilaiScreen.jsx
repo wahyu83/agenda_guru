@@ -13,7 +13,6 @@ const NilaiScreen = () => {
 
   const today = new Date();
   const maxDate = today.toISOString().split('T')[0];
-  const minDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
   const [siswa, setSiswa] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -140,7 +139,7 @@ const NilaiScreen = () => {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.875rem', fontWeight: '500' }}>Tanggal</label>
-            <input type="date" className="input w-full" value={tanggal} min={minDate} max={maxDate} onChange={(e) => setTanggal(e.target.value)} required />
+            <input type="date" className="input w-full" value={tanggal} max={maxDate} onChange={(e) => setTanggal(e.target.value)} required />
           </div>
           <div>
             <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.875rem', fontWeight: '500' }}>Jenis</label>

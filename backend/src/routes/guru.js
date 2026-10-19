@@ -290,11 +290,6 @@ router.post('/nilai', async (req, res) => {
   try {
     const { pengampuId, dataNilai } = req.body;
 
-    if (dataNilai && dataNilai.length > 0) {
-      const errTgl = validateTanggal(dataNilai[0].tanggal);
-      if (errTgl) return res.status(400).json({ error: errTgl });
-    }
-
     const payloads = dataNilai.map(d => ({
       pengampuId: parseInt(pengampuId),
       siswaId: parseInt(d.siswaId),
