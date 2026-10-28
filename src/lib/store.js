@@ -16,6 +16,7 @@ export const useAppStore = create((set, get) => ({
   bobotNilai: [],
   laporanAgenda: [],
   laporanAbsensi: [],
+  laporanAktivitas: [],
   laporanPiket: [],
   kelasWali: [],
   laporanKelas: { agenda: [], absensi: [] },
@@ -470,6 +471,12 @@ export const useAppStore = create((set, get) => ({
     const res = await fetch(`${API_BASE}/admin/laporan/absensi`);
     const data = await res.json();
     set({ laporanAbsensi: data });
+  },
+
+  fetchLaporanAktivitas: async (limit = 10) => {
+    const res = await fetch(`${API_BASE}/admin/laporan/aktivitas?limit=${limit}`);
+    const data = await res.json();
+    set({ laporanAktivitas: data });
   },
 
   fetchLaporanPiket: async (date = '') => {

@@ -14,13 +14,21 @@ const StatCard = ({ title, value, icon, color }) => (
   </div>
 );
 
+const TIPE_AKTIVITAS = {
+  agenda: { label: 'Agenda', color: 'var(--primary)' },
+  absensi: { label: 'Absensi', color: 'var(--info)' },
+  nilai: { label: 'Nilai', color: 'var(--secondary)' },
+  rencana: { label: 'Rencana', color: 'var(--warning)' },
+};
+
 const AdminDashboard = () => {
-  const { guru, siswa, mapel, laporanAgenda, settings, fetchMasterData, fetchLaporanAgenda } = useAppStore();
+  const { guru, siswa, mapel, laporanAgenda, laporanAktivitas, settings, fetchMasterData, fetchLaporanAgenda, fetchLaporanAktivitas } = useAppStore();
 
   useEffect(() => {
     fetchMasterData();
     fetchLaporanAgenda();
-  }, [fetchMasterData, fetchLaporanAgenda]);
+    fetchLaporanAktivitas();
+  }, [fetchMasterData, fetchLaporanAgenda, fetchLaporanAktivitas]);
 
   const totalGuru = guru.length;
   const totalSiswa = siswa.length;
@@ -31,8 +39,6 @@ const AdminDashboard = () => {
     const agendaDate = new Date(agenda.tanggal).toISOString().split('T')[0];
     return agendaDate === today;
   }).length;
-
-  const recentAgendas = laporanAgenda.slice(0, 5); // Take top 5
 
   const formatTime = (dateString) => {
     if (!dateString) return '-';
@@ -61,35 +67,40 @@ const AdminDashboard = () => {
       </div>
 
       <div className="card" style={{ marginTop: '2rem', padding: '1.5rem' }}>
-        <h2 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1rem' }}>Aktivitas Pengisian Agenda Terbaru</h2>
+        <h2 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1rem' }}>Aktivitas Pengisian Terbaru</h2>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
                 <th style={{ padding: '0.75rem', color: 'var(--text-muted)', fontWeight: '500' }}>Waktu</th>
+                <th style={{ padding: '0.75rem', color: 'var(--text-muted)', fontWeight: '500' }}>Jenis</th>
                 <th style={{ padding: '0.75rem', color: 'var(--text-muted)', fontWeight: '500' }}>Guru</th>
                 <th style={{ padding: '0.75rem', color: 'var(--text-muted)', fontWeight: '500' }}>Kelas</th>
                 <th style={{ padding: '0.75rem', color: 'var(--text-muted)', fontWeight: '500' }}>Mata Pelajaran</th>
-                <th style={{ padding: '0.75rem', color: 'var(--text-muted)', fontWeight: '500' }}>Status</th>
+                <th style={{ padding: '0.75rem', color: 'var(--text-muted)', fontWeight: '500' }}>Keterangan</th>
               </tr>
             </thead>
             <tbody>
-              {recentAgendas.length > 0 ? recentAgendas.map((agenda, i) => (
-                <tr key={agenda.id || i} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  <td style={{ padding: '0.75rem' }}>{formatTime(agenda.last_modified || agenda.tanggal)}</td>
-                  <td style={{ padding: '0.75rem', fontWeight: '500' }}>{agenda.pengampu?.guru?.nama || '-'}</td>
-                  <td style={{ padding: '0.75rem' }}>{agenda.pengampu?.kelas?.nama || '-'}</td>
-                  <td style={{ padding: '0.75rem' }}>{agenda.pengampu?.mapel?.nama || '-'}</td>
-                  <td style={{ padding: '0.75rem' }}>
-                    <span style={{ padding: '0.25rem 0.75rem', backgroundColor: 'var(--secondary-light)', color: 'var(--secondary-hover)', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: '600' }}>
-                      {agenda.status_sync === 'synced' ? 'Tersinkron' : 'Belum Sinkron'}
-                    </span>
-                  </td>
-                </tr>
-              )) : (
+              {laporanAktivitas.length > 0 ? laporanAktivitas.map((item) => {
+                const meta = TIPE_AKTIVITAS[item.tipe] || { label: item.tipe, color: 'var(--text-muted)' };
+                return (
+                  <tr key={item.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                    <td style={{ padding: '0.75rem' }}>{formatTime(item.waktu)}</td>
+                    <td style={{ padding: '0.75rem' }}>
+                      <span style={{ padding: '0.25rem 0.75rem', backgroundColor: 'var(--surface-hover)', color: meta.color, borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: '600' }}>
+                        {meta.label}
+                      </span>
+                    </td>
+                    <td style={{ padding: '0.75rem', fontWeight: '500' }}>{item.guru || '-'}</td>
+                    <td style={{ padding: '0.75rem' }}>{item.kelas || '-'}</td>
+                    <td style={{ padding: '0.75rem' }}>{item.mapel || '-'}</td>
+                    <td style={{ padding: '0.75rem', color: 'var(--text-muted)' }}>{item.keterangan || '-'}</td>
+                  </tr>
+                );
+              }) : (
                 <tr>
-                  <td colSpan="5" style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                    Belum ada aktivitas agenda terbaru.
+                  <td colSpan="6" style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                    Belum ada aktivitas pengisian terbaru.
                   </td>
                 </tr>
               )}

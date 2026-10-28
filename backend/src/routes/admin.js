@@ -346,6 +346,49 @@ router.get('/laporan/absensi', async (req, res) => {
   res.json(data);
 });
 
+// --- AKTIVITAS PENGISIAN TERBARU (gabungan agenda, absensi, nilai, rencana) ---
+router.get('/laporan/aktivitas', async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 10, 50);
+    const includePengampu = { pengampu: { include: { guru: true, kelas: true, mapel: true } } };
+    const JENIS_NILAI = { tugas: 'Tugas', ulangan: 'Ulangan', mid: 'Mid', semester: 'Semester' };
+
+    const [agenda, absensi, nilai, rencana] = await Promise.all([
+      prisma.agenda.findMany({ include: includePengampu, orderBy: { last_modified: 'desc' }, take: limit }),
+      prisma.absensi.findMany({
+        include: { ...includePengampu, _count: { select: { siswaDetail: true } } },
+        orderBy: { last_modified: 'desc' },
+        take: limit
+      }),
+      prisma.nilai.findMany({ include: includePengampu, orderBy: { last_modified: 'desc' }, take: limit }),
+      prisma.rencanaPertemuan.findMany({ include: includePengampu, orderBy: { updatedAt: 'desc' }, take: limit })
+    ]);
+
+    const toItem = (tipe, row, waktu, keterangan) => ({
+      id: `${tipe}-${row.id}`,
+      tipe,
+      waktu,
+      guru: row.pengampu?.guru?.nama || null,
+      kelas: row.pengampu?.kelas?.nama || null,
+      mapel: row.pengampu?.mapel?.nama || null,
+      keterangan
+    });
+
+    const items = [
+      ...agenda.map(a => toItem('agenda', a, a.last_modified || a.tanggal, a.materi)),
+      ...absensi.map(a => toItem('absensi', a, a.last_modified || a.tanggal, `${a._count?.siswaDetail ?? 0} siswa`)),
+      ...nilai.map(n => toItem('nilai', n, n.last_modified || n.tanggal, [JENIS_NILAI[n.jenis] || n.jenis, n.deskripsi].filter(Boolean).join(' - '))),
+      ...rencana.map(r => toItem('rencana', r, r.updatedAt || r.createdAt, r.judul))
+    ];
+
+    items.sort((a, b) => new Date(b.waktu) - new Date(a.waktu));
+    res.json(items.slice(0, limit));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Gagal mengambil aktivitas pengisian' });
+  }
+});
+
 // --- LAPORAN PIKET ---
 router.get('/laporan/piket', async (req, res) => {
   try {
