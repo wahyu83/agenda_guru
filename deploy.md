@@ -11,13 +11,17 @@ Akses VPS Anda melalui SSH, lalu install semua kebutuhan dasar:
 # 1. Update sistem
 sudo apt update && sudo apt upgrade -y
 
-# 2. Install Node.js (menggunakan Node Version Manager / NVM)
+# 2. Install Node.js 24 (menggunakan Node Version Manager / NVM)
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
 source ~/.bashrc
 nvm install 24
+nvm alias default 24   # WAJIB: agar Node 24 tetap aktif di setiap sesi SSH baru
 nvm use 24
+node -v                # pastikan tampil v24.x
 
 # 3. Install PM2 (Untuk menjaga backend tetap menyala 24/7)
+#    PM2 terikat pada versi Node yang aktif. Kalau nanti ganti versi Node
+#    (mis. 20 -> 24), wajib `npm install -g pm2` ulang lalu `pm2 update`.
 npm install -g pm2
 
 # 4. Install Nginx (Sebagai web server)
@@ -97,6 +101,8 @@ npm run build
 
 Pastikan konfigurasi API_BASE di `src/lib/store.js` sudah mengarah ke endpoint VPS Anda sebelum proses build dilakukan.
 
+> **Syarat Node untuk build frontend:** proyek ini memakai **Vite 8** yang butuh **Node >= 22.12** (`^20.19.0 || >=22.12.0`). Di **Node 20 biasa build bisa gagal** — pastikan `node -v` menunjukkan **v24.x** sebelum `npm run build`.
+
 ---
 
 ## 5. Konfigurasi Nginx (Reverse Proxy)
@@ -159,6 +165,38 @@ Berhubung aplikasi ini sudah didukung teknologi PWA, para guru dapat membuka dom
 ## 7. Update Aplikasi di VPS
 
 Setelah ada pembaruan kode di GitHub, ikuti langkah berikut untuk update aplikasi di VPS:
+
+### Upgrade Node.js di VPS (mis. 20 → 24)
+
+Lakukan ini **hanya saat ganti versi Node** (tidak perlu tiap deploy). Urutannya penting:
+
+```bash
+# 1) Pasang Node 24 & jadikan default
+source ~/.nvm/nvm.sh
+nvm install 24 && nvm alias default 24 && nvm use 24 && node -v
+
+# 2) Install ulang PM2 di Node 24 (PM2 terikat ke versi Node yang aktif)
+npm install -g pm2
+
+# 3) Segarkan daemon PM2 agar memakai Node baru
+pm2 update
+
+# 4) Rebuild modul native (mis. bcrypt) terhadap Node 24
+cd /var/www/agenda-guru/backend && npm rebuild
+
+# 5) Pastikan proses tetap ada, lalu simpan
+pm2 restart agenda-backend || pm2 start src/index.js --name agenda-backend
+pm2 save
+```
+
+> **Jebakan yang sering terjadi:** sesudah `pm2 update`, proses bisa hilang dari daftar (`pm2 list` kosong) sehingga backend mati — karena itu langkah 5 memakai `|| pm2 start ...`.
+>
+> **Wajib verifikasi (bukan asumsi):**
+> ```bash
+> node -v                                                     # harus v24.x
+> readlink -f /proc/$(pm2 pid agenda-backend)/exe             # harus .../node/v24.x/bin/node
+> curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000/api/admin/settings   # harus 200
+> ```
 
 ### Update Backend
 ```bash
