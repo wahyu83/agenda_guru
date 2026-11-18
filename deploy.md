@@ -68,7 +68,18 @@ cd agenda-guru/backend
    ```env
    PORT=3000
    DATABASE_URL="postgresql://admin_agenda:password_rahasia@localhost:5432/agenda_guru?schema=public"
+   TZ=Asia/Jakarta
+   VAPID_PUBLIC_KEY="<hasil generate>"
+   VAPID_PRIVATE_KEY="<hasil generate>"
+   VAPID_SUBJECT="mailto:email-anda@domain.com"
    ```
+
+   > **Notifikasi jadwal (Web Push):** generate kunci VAPID sekali dengan
+   > `npx web-push generate-vapid-keys` (jalankan di folder `backend/`), lalu tempel
+   > ke `.env`. Tanpa `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`, scheduler notifikasi jadwal
+   > otomatis dinonaktifkan (backend tetap jalan normal). `.env` tidak ikut ter-push ke
+   > GitHub, jadi **wajib diisi manual di VPS**. `TZ=Asia/Jakarta` penting agar notifikasi
+   > dikirim tepat sesuai jam WIB.
 3. Install modul dan migrasi database:
    ```bash
    npm install

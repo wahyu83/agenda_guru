@@ -21,6 +21,8 @@ const piketRoutes = require('./routes/piket');
 const izinRoutes = require('./routes/izin');
 const bkRoutes = require('./routes/bk');
 const absensiHarianRoutes = require('./routes/absensiHarian');
+const pushRoutes = require('./routes/push');
+const { startReminderScheduler } = require('./services/reminder');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
@@ -29,6 +31,7 @@ app.use('/api/piket', piketRoutes);
 app.use('/api/izin', izinRoutes);
 app.use('/api/bk', bkRoutes);
 app.use('/api/absensi-harian', absensiHarianRoutes);
+app.use('/api/push', pushRoutes);
 
 app.get('/', (req, res) => {
   res.send('Agenda guru SMKN 1 Arahan API is running');
@@ -37,4 +40,5 @@ app.get('/', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  startReminderScheduler();
 });

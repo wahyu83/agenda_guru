@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Calendar, Clock, User, UserCog, WifiOff, FileText, BookOpen, Bell, X } from 'lucide-react';
+import { Home, Calendar, Clock, User, UserCog, WifiOff, FileText, BookOpen, Bell, BellOff, X } from 'lucide-react';
 import { useAppStore } from '../../lib/store';
 import ProfileModal from '../../components/ProfileModal';
+import { enablePush, disablePush, isPushSupported, getPushState } from '../../lib/push';
 
 const HARI = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
 const NOTIF_BEFORE_MINUTES = 5;
@@ -13,6 +14,7 @@ const GuruLayout = () => {
   const { user, setUser, kelasWali, jadwalGuru, jamPelajaran, fetchWaliKelas, fetchJadwalGuru, fetchJamPelajaran } = useAppStore();
   const [showProfile, setShowProfile] = useState(false);
   const [notif, setNotif] = useState(null);
+  const [pushOn, setPushOn] = useState(false);
   const dismissedRef = useRef(new Set());
   const isOffline = false;
 
@@ -29,6 +31,33 @@ const GuruLayout = () => {
       fetchJamPelajaran();
     }
   }, [user, fetchWaliKelas, fetchJadwalGuru, fetchJamPelajaran]);
+
+  useEffect(() => {
+    let mounted = true;
+    getPushState().then((s) => {
+      if (mounted) setPushOn(s.subscribed && s.permission === 'granted');
+    });
+    return () => { mounted = false; };
+  }, []);
+
+  const handleTogglePush = async () => {
+    if (!isPushSupported()) {
+      alert('Browser/perangkat ini tidak mendukung notifikasi. Di iPhone, tambahkan dulu aplikasi ke Home Screen.');
+      return;
+    }
+    try {
+      if (pushOn) {
+        await disablePush();
+        setPushOn(false);
+      } else {
+        await enablePush(user.id);
+        setPushOn(true);
+        alert('Notifikasi jadwal mengajar aktif.');
+      }
+    } catch (err) {
+      alert(err.message || 'Gagal mengatur notifikasi.');
+    }
+  };
 
   const jamKeWaktuMap = useMemo(() => {
     const map = {};
@@ -109,11 +138,20 @@ const GuruLayout = () => {
           </div>
         </div>
         
-        {isOffline && (
-          <div className="flex items-center gap-1" style={{ backgroundColor: 'var(--warning)', padding: '0.25rem 0.5rem', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: '600' }}>
-            <WifiOff size={14} /> Offline Mode
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {isOffline && (
+            <div className="flex items-center gap-1" style={{ backgroundColor: 'var(--warning)', padding: '0.25rem 0.5rem', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: '600' }}>
+              <WifiOff size={14} /> Offline Mode
+            </div>
+          )}
+          <button
+            onClick={handleTogglePush}
+            title={pushOn ? 'Matikan notifikasi jadwal' : 'Aktifkan notifikasi jadwal'}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.4rem', border: 'none', cursor: 'pointer', borderRadius: 'var(--radius-md)', backgroundColor: pushOn ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.12)' }}
+          >
+            {pushOn ? <Bell size={20} color="#fff" /> : <BellOff size={20} color="rgba(255,255,255,0.7)" />}
+          </button>
+        </div>
       </header>
 
       {/* Notifikasi Jadwal */}
