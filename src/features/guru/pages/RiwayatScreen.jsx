@@ -189,7 +189,7 @@ const RiwayatScreen = () => {
         return row;
       });
       return { kelas: group.pengampu.kelas.nama, mapel: group.pengampu.mapel.nama, guru: user?.nama || '-', dates, matrixData };
-    });
+    }).sort((a, b) => a.kelas.localeCompare(b.kelas) || a.mapel.localeCompare(b.mapel));
 
     if (type === 'csv') {
       let csvRows = [];
@@ -310,7 +310,7 @@ const RiwayatScreen = () => {
 
   // --- NILAI EXPORT (Rekap Matrix) ---
   const exportNilai = (type) => {
-    const matrices = buildRekapNilai();
+    const matrices = buildRekapNilai().sort((a, b) => a.kelas.localeCompare(b.kelas) || a.mapel.localeCompare(b.mapel));
     if (matrices.length === 0) {
       alert('Tidak ada data nilai untuk diekspor.');
       return;
