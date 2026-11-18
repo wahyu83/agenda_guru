@@ -419,6 +419,7 @@ const RiwayatScreen = () => {
         groups.set(key, {
           pengampuId: n.pengampuId,
           kelasId: n.pengampu?.kelas?.id,
+          mapelId: n.pengampu?.mapel?.id,
           kelas: n.pengampu?.kelas?.nama,
           mapel: n.pengampu?.mapel?.nama,
           tanggal: n.tanggal,
@@ -583,7 +584,11 @@ const RiwayatScreen = () => {
               <hr style={{ border: 'none', borderTop: '1px solid var(--border-color)', margin: '1rem 0' }} />
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Riwayat Absensi Harian</p>
 
-              {riwayatGuru.absensi.map((item) => (
+              {!selectedKelasRecap ? (
+                <div className="card" style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem' }}>Pilih kelas di atas untuk melihat riwayat absensi harian.</div>
+              ) : riwayatGuru.absensi
+                .filter(item => item.pengampu?.kelas?.id === selectedKelasRecap)
+                .map((item) => (
                 <div key={item.id} className="card" style={{ padding: '1rem' }}>
                   <div className="flex justify-between items-start" style={{ marginBottom: '0.5rem' }}>
                     <div>
@@ -622,7 +627,9 @@ const RiwayatScreen = () => {
                 const sel = matrices.find(m => m.key === selectedRekap) || matrices[0];
                 const th = { padding: '0.5rem', color: 'var(--text-muted)', fontWeight: '600', textAlign: 'center', whiteSpace: 'nowrap' };
                 const td = { padding: '0.5rem', textAlign: 'center' };
+                const selectedSessions = getNilaiSessions().filter(s => s.kelasId === sel.kelasId && s.mapelId === sel.mapelId);
                 return (
+                  <>
                   <div className="card" style={{ padding: '0.75rem', marginBottom: '0.75rem' }}>
                     <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Rekap Nilai Akhir</h3>
                     <select className="input" value={sel.key} onChange={(e) => setSelectedRekap(e.target.value)} style={{ marginBottom: '0.5rem' }}>
@@ -655,9 +662,11 @@ const RiwayatScreen = () => {
                       </table>
                     </div>
                   </div>
-                );
-              })()}
-              {getNilaiSessions().map((session, idx) => (
+
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Riwayat Penilaian {sel.kelas} - {sel.mapel}</p>
+                  {selectedSessions.length === 0 ? (
+                    <div className="card" style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem' }}>Belum ada riwayat penilaian untuk kelas dan mapel ini.</div>
+                  ) : selectedSessions.map((session, idx) => (
               <div key={idx} className="card" style={{ padding: '1rem', cursor: 'pointer' }}
                 onClick={() => navigate(`/guru/nilai-edit?pengampuId=${session.pengampuId}&tanggal=${session.tanggal}&jenis=${session.jenis}&deskripsi=${encodeURIComponent(session.deskripsi)}&kelasId=${session.kelasId}`)}>
                 <div className="flex justify-between items-start">
@@ -688,7 +697,10 @@ const RiwayatScreen = () => {
                   </div>
                 </div>
               </div>
-              ))}
+                  ))}
+                  </>
+                );
+              })()}
             </>
           )
         )}
