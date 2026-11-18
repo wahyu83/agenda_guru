@@ -71,7 +71,7 @@ cd agenda-guru/backend
    TZ=Asia/Jakarta
    VAPID_PUBLIC_KEY="<hasil generate>"
    VAPID_PRIVATE_KEY="<hasil generate>"
-   VAPID_SUBJECT="mailto:email-anda@domain.com"
+   VAPID_SUBJECT="https://domain_anda.com"
    ```
 
    > **Notifikasi jadwal (Web Push):** generate kunci VAPID sekali dengan
@@ -79,7 +79,8 @@ cd agenda-guru/backend
    > ke `.env`. Tanpa `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`, scheduler notifikasi jadwal
    > otomatis dinonaktifkan (backend tetap jalan normal). `.env` tidak ikut ter-push ke
    > GitHub, jadi **wajib diisi manual di VPS**. `TZ=Asia/Jakarta` penting agar notifikasi
-   > dikirim tepat sesuai jam WIB.
+   > dikirim tepat sesuai jam WIB. `VAPID_SUBJECT` harus diawali `mailto:` atau `https://`
+   > (mis. `https://g.smkn1arahan.my.id`).
 3. Install modul dan migrasi database:
    ```bash
    npm install
