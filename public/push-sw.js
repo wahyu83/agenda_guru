@@ -17,6 +17,9 @@ self.addEventListener('push', (event) => {
     badge: 'icon.png',
     tag: data.tag || 'jadwal-mengajar',
     renotify: true,
+    requireInteraction: true,
+    silent: false,
+    vibrate: [300, 100, 300],
     data: { url: data.url || '/guru/jadwal' }
   };
 
